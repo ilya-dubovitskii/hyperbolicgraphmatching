@@ -7,6 +7,8 @@ import torch.nn.functional as F
 import torch.nn.init as init
 from torch.nn.modules.module import Module
 
+from torch_geometric.nn import MessagePassing
+
 from layers.att_layers import DenseAtt
 
 
@@ -177,3 +179,42 @@ class HypAct(Module):
         return 'c_in={}, c_out={}'.format(
             self.c_in, self.c_out
         )
+
+class MyHyperbolicGraphConvolution(MessagePassing):
+    
+    def __init__(self, manifold, in_channels, out_channels, c, c1, dropout, act, use_bias, use_att, local_agg, verbose=False):
+        super().__init__(aggr='add')
+        self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
+        self.bias = nn.Parameter(torch.Tensor(out_channels))
+        self.manifold = manifold
+        self.c = c
+        self.verbose = verbose
+        self.reset_parameters()
+        
+    def reset_parameters(self):
+        init.xavier_uniform_(self.weight, gain=math.sqrt(2))
+        init.constant_(self.bias, 0)
+    
+    def message(self, x_i, x_j, verbose=False):
+        if verbose:
+            print('--------------------MESSAGE--------------------------')
+        out = self.manifold.mobius_matvec(self.weight, x_j, self.c, verbose)
+        out = self.manifold.logmap(out, x_i, self.c, verbose)
+        if verbose:
+            print('++++++++++++++++++++MESSAGE++++++++++++++++++++++++++')
+        return out
+        
+    def update(self, x_j, x=None, verbose=False):
+        if verbose:
+            print('----------------------UPDATE-------------------------')
+        x = self.manifold.expmap(x_j, x, self.c, verbose)
+        x = self.manifold.to_poincare(x, self.c, verbose)
+        x = F.relu(x)
+        x = self.manifold.to_hyperboloid(x, self.c, verbose)
+        if verbose:
+            print('++++++++++++++++++++++UPDATE++++++++++++++++++++++++++')
+        return x
+        
+    def forward(self, input):
+        x, edge_index = input
+        return self.propagate(edge_index, x=x), edge_index

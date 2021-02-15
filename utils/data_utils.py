@@ -8,6 +8,7 @@ import numpy as np
 import scipy.sparse as sp
 import torch
 
+from torch_geometric.utils import from_scipy_sparse_matrix, add_self_loops
 
 def load_data(args, datapath):
     if args.task == 'nc':
@@ -40,9 +41,10 @@ def process(adj, features, normalize_adj, normalize_feats):
     if normalize_feats:
         features = normalize(features)
     features = torch.Tensor(features)
-    if normalize_adj:
-        adj = normalize(adj + sp.eye(adj.shape[0]))
-    adj = sparse_mx_to_torch_sparse_tensor(adj)
+#     if normalize_adj:
+#         adj = normalize(adj + sp.eye(adj.shape[0]))
+#     adj = sparse_mx_to_torch_sparse_tensor(adj)
+    
     return adj, features
 
 
@@ -171,6 +173,7 @@ def load_data_nc(dataset, use_feats, data_path, split_seed):
 
 
 def load_citation_data(dataset_str, use_feats, data_path, split_seed=None):
+    print('wooooooooooooooooooooooooooooooooooooooooooooo')
     names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
     objects = []
     for i in range(len(names)):
@@ -196,6 +199,9 @@ def load_citation_data(dataset_str, use_feats, data_path, split_seed=None):
     idx_val = range(len(y), len(y) + 500)
 
     adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))
+    # PYG STUFF
+    adj = from_scipy_sparse_matrix(adj)[0]
+    adj = add_self_loops(adj)[0]
     if not use_feats:
         features = sp.eye(adj.shape[0])
     return adj, features, labels, idx_train, idx_val, idx_test

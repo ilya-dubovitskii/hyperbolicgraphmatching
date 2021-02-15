@@ -6,7 +6,7 @@ from manifolds.base import Manifold
 from utils.math_utils import arcosh, cosh, sinh 
 
 
-class Hyperboloid(Manifold):
+class Hyperboloid():
     """
     Hyperboloid manifold class.
 
@@ -23,6 +23,7 @@ class Hyperboloid(Manifold):
         self.max_norm = 1e6
 
     def minkowski_dot(self, x, y, keepdim=True):
+        #print(x.shape, y.shape)
         res = torch.sum(x * y, dim=-1) - 2 * x[..., 0] * y[..., 0]
         if keepdim:
             res = res.view(res.shape + (1,))
@@ -67,7 +68,11 @@ class Hyperboloid(Manifold):
         vals[:, 0:1] = narrowed
         return u - vals
 
-    def expmap(self, u, x, c):
+    def expmap(self, u, x, c, verbose=False):
+        if verbose:
+            print(f'####### EXPMAP #######')
+            print(f'Input: {torch.isnan(u).sum().item()} nans')
+        
         K = 1. / c
         sqrtK = K ** 0.5
         normu = self.minkowski_norm(u)
@@ -75,9 +80,24 @@ class Hyperboloid(Manifold):
         theta = normu / sqrtK
         theta = torch.clamp(theta, min=self.min_norm)
         result = cosh(theta) * x + sinh(theta) * u / theta
-        return self.proj(result, c)
+        if verbose:
+            print(f'{(theta == 0).sum().item()} zeros in denominator')
+        if verbose:      
+            print(f'theta: {torch.isnan(theta).sum().item()}, \
+                  cosh: {torch.isnan(cosh(theta)).sum().item()}, \
+                  sinh: {torch.isnan(sinh(theta)).sum().item()}')
+
+            print(f'Before proj: {torch.isnan(result).sum().item()} nans')
+        out = self.proj(result, c)
+        if verbose:
+            print(f'Output: {torch.isnan(out).sum().item()} nans')
+            print(f'$$$$$$ EXPMAP END $$$$$$')
+        return out
         
-    def logmap(self, x, y, c):
+    def logmap(self, x, y, c, verbose=False):
+        if verbose:
+            print(f'####### LOGMAP #######')
+            print(f'Input: {torch.isnan(x).sum().item()} nans')
         K = 1. / c
         xy = torch.clamp(self.minkowski_dot(x, y) + K, max=-self.eps[x.dtype]) - K
         u = y + xy * x * c
@@ -85,9 +105,19 @@ class Hyperboloid(Manifold):
         normu = torch.clamp(normu, min=self.min_norm)
         dist = self.sqdist(x, y, c) ** 0.5
         result = dist * u / normu
-        return self.proj_tan(result, x, c)
+        if verbose:
+            print(f'Before proj: {torch.isnan(result).sum().item()} nans')
+        out = self.proj_tan(result, x, c)
+        if verbose:
+            print(f'Output: {torch.isnan(out).sum().item()} nans')
+            print(f'$$$$$$ LOGMAP END $$$$$$')
+        
+        return out
 
-    def expmap0(self, u, c):
+    def expmap0(self, u, c, verbose=False):
+        if verbose:
+            print(f'####### EXPMAP0 #######')
+            print(f'Input: {torch.isnan(u).sum().item()} nans')
         K = 1. / c
         sqrtK = K ** 0.5
         d = u.size(-1) - 1
@@ -98,9 +128,29 @@ class Hyperboloid(Manifold):
         res = torch.ones_like(u)
         res[:, 0:1] = sqrtK * cosh(theta)
         res[:, 1:] = sqrtK * sinh(theta) * x / x_norm
-        return self.proj(res, c)
+        if verbose:
+            print(f'max theta is: {torch.max(theta)}, sinh: {torch.max(sinh(theta))}, cosh: {torch.max(cosh(theta))}')
+            print(f'res[0:1]: {torch.isnan(res[:, 0:1]).sum().item()} nans')
+            print(f'res[1:]: {torch.isnan(res[:, 1:]).sum().item()} nans')
+            print(f'x: {torch.isnan(x).sum().item()}, x/x_norm: {torch.isnan(x / x_norm).sum().item()}')
+        out = self.proj(res, c)
+        if verbose:
+            print(f'zeros in denominator {(x_norm == 0).sum().item()}')
+            print(f'theta: {torch.isnan(theta).sum().item()}, cosh: {torch.isnan(cosh(theta)).sum().item()}, sinh: {torch.isnan(sinh(theta)).sum().item()}')
+            print(f'Before proj: {torch.isnan(res).sum().item()} nans')
+        out = self.proj(res, c)
+        if verbose:
+            print(f'Output: {torch.isnan(out).sum().item()} nans')
+            print(f'$$$$$$ EXPMAP0 END $$$$$$')
+        
+        
+        return out
 
-    def logmap0(self, x, c):
+    def logmap0(self, x, c, desc=None, verbose=False):
+        if verbose:
+            print(f'####### LOGMAP0 #######')
+            print(f'Input: {torch.isnan(x).sum().item()} nans')
+        
         K = 1. / c
         sqrtK = K ** 0.5
         d = x.size(-1) - 1
@@ -108,8 +158,20 @@ class Hyperboloid(Manifold):
         y_norm = torch.norm(y, p=2, dim=1, keepdim=True)
         y_norm = torch.clamp(y_norm, min=self.min_norm)
         res = torch.zeros_like(x)
-        theta = torch.clamp(x[:, 0:1] / sqrtK, min=1.0 + self.eps[x.dtype])
-        res[:, 1:] = sqrtK * arcosh(theta) * y / y_norm
+        if len(x.shape) > 1:
+            theta = torch.clamp(x[:, 0:1] / sqrtK, min=1.0 + self.eps[x.dtype])
+            res[:, 1:] = sqrtK * arcosh(theta) * y / y_norm
+        else:
+            theta = torch.clamp(x[0:1] / sqrtK, min=1.0 + self.eps[x.dtype])
+            res[1:] = sqrtK * arcosh(theta) * y / y_norm
+        if verbose:      
+            print(f'zeros in denominator {(y_norm == 0).sum().item()}')      
+            print(f'theta: {torch.isnan(theta).sum().item()}, \
+                  arcosh: {torch.isnan(arcosh(theta)).sum().item()}')      
+            print(f'Output: {torch.isnan(res).sum().item()} nans')
+            print(f'$$$$$$ LOGMAP0 END $$$$$$')
+        
+        
         return res
 
     def mobius_add(self, x, y, c):
@@ -117,10 +179,22 @@ class Hyperboloid(Manifold):
         v = self.ptransp0(x, u, c)
         return self.expmap(v, x, c)
 
-    def mobius_matvec(self, m, x, c):
+    def mobius_matvec(self, m, x, c, desc=None, verbose=False):   
+        if verbose:
+            print(f'################ MOBIUS MATVEC #################')
+            print(f'Input: {torch.isnan(x).sum().item()} nans')
         u = self.logmap0(x, c)
+        if verbose:
+            print(f'After logmap0: {torch.isnan(u).sum().item()} nans')
+        
         mu = u @ m.transpose(-1, -2)
-        return self.expmap0(mu, c)
+        if verbose:
+            print(f'After mu: {torch.isnan(mu).sum().item()} nans')
+        out = self.expmap0(mu, c)
+        if verbose:
+            print(f'After expmap0: {torch.isnan(out).sum().item()} nans')
+            print(f'$$$$$$$$$$$$$$$$ MOBIUS MATVEC END $$$$$$$$$$$$$$$$$$')
+        return out
 
     def ptransp(self, x, y, u, c):
         logxy = self.logmap(x, y, c)
@@ -141,13 +215,39 @@ class Hyperboloid(Manifold):
         v = torch.ones_like(x)
         v[:, 0:1] = - y_norm 
         v[:, 1:] = (sqrtK - x0) * y_normalized
-        alpha = torch.sum(y_normalized * u[:, 1:], dim=1, keepdim=True) / sqrtK
+        if len(u.shape) > 1:
+            alpha = torch.sum(y_normalized * u[:, 1:], dim=1, keepdim=True) / sqrtK
+        else:
+            alpha = torch.sum(y_normalized * u[1:], dim=1, keepdim=True) / sqrtK
         res = u - alpha * v
         return self.proj_tan(res, x, c)
 
-    def to_poincare(self, x, c):
+    def to_poincare(self, x, c, verbose=False):
+        if verbose:
+            print(f'####### TO POINCARE #######')
+            print(f'Input: {torch.isnan(x).sum().item()} nans')
         K = 1. / c
         sqrtK = K ** 0.5
         d = x.size(-1) - 1
-        return sqrtK * x.narrow(-1, 1, d) / (x[:, 0:1] + sqrtK)
+        out = sqrtK * x.narrow(-1, 1, d) / (x[:, 0:1] + sqrtK)
+        if verbose:
+            print((x[:, 0:1] + sqrtK == 0).sum().item())
+            print(f'Input: {torch.isnan(out).sum().item()} nans')
+            print(f'$$$$$$$ TO POINCARE END $$$$$$$')
+        return out
+
+    def to_hyperboloid(self, x, c, verbose=False):
+        if verbose:
+            print(f'####### TO HYPERBOLOID #######')
+            print(f'Input: {torch.isnan(x).sum().item()} nans')
+        K = 1./ c
+        sqrtK = K ** 0.5
+        sqnorm = torch.norm(x, p=2, dim=1, keepdim=True) ** 2
+        out = sqrtK * torch.cat([K + sqnorm, 2 * sqrtK * x], dim=1) / (K - sqnorm)
+        print((K - sqnorm == 0).sum().item())
+        if verbose:
+            print(f'Output: {torch.isnan(out).sum().item()} nans')
+            print(f'$$$$$$$ TO HYPERBOLOID END $$$$$$$')
+        
+        return out
 

@@ -77,6 +77,7 @@ model2decoder = {
     'GAT': GATDecoder,
     'HNN': LinearDecoder,
     'HGCN': LinearDecoder,
+    'MyHGCN': LinearDecoder,
     'MLP': LinearDecoder,
     'Shallow': LinearDecoder,
 }

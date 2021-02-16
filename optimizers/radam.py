@@ -1,9 +1,10 @@
 """Riemannian adam optimizer geoopt implementation (https://github.com/geoopt/)."""
 import torch.optim
-from manifolds import Euclidean, ManifoldParameter
+from manifolds import Euclidean, ManifoldParameter, Hyperboloid
 
 # in order not to create it at each iteration
 _default_manifold = Euclidean()
+# _default_manifold = Hyperboloid()
 
 
 class OptimMixin(object):
@@ -148,6 +149,7 @@ class RiemannianAdam(OptimMixin, torch.optim.Adam):
                     # get the direction for ascend
                     direction = exp_avg / denom
                     # transport the exponential averaging to the new point
+#                     print(point)
                     new_point = manifold.proj(manifold.expmap(-step_size * direction, point, c), c)
                     exp_avg_new = manifold.ptransp(point, new_point, exp_avg, c)
                     # use copy only for user facing point

@@ -10,40 +10,29 @@ import torch
 
 from torch_geometric.utils import from_scipy_sparse_matrix, add_self_loops
 
-def load_data(args, datapath):
+def load_data(args, datapath, pyg_stuff=True):
     if args.task == 'nc':
-        data = load_data_nc(args.dataset, args.use_feats, datapath, args.split_seed)
-    else:
-        data = load_data_lp(args.dataset, args.use_feats, datapath)
-        adj = data['adj_train']
-        if args.task == 'lp':
-            adj_train, train_edges, train_edges_false, val_edges, val_edges_false, test_edges, test_edges_false = mask_edges(
-                    adj, args.val_prop, args.test_prop, args.split_seed
-            )
-            data['adj_train'] = adj_train
-            data['train_edges'], data['train_edges_false'] = train_edges, train_edges_false
-            data['val_edges'], data['val_edges_false'] = val_edges, val_edges_false
-            data['test_edges'], data['test_edges_false'] = test_edges, test_edges_false
+        data = load_data_nc(args.dataset, args.use_feats, datapath, args.split_seed, pyg_stuff)
     data['adj_train_norm'], data['features'] = process(
-            data['adj_train'], data['features'], args.normalize_adj, args.normalize_feats
+            data['adj_train'], data['features'], args.normalize_adj, args.normalize_feats, pyg_stuff
     )
-    if args.dataset == 'airport':
-        data['features'] = augment(data['adj_train'], data['features'])
+  
     return data
 
 
 # ############### FEATURES PROCESSING ####################################
 
 
-def process(adj, features, normalize_adj, normalize_feats):
+def process(adj, features, normalize_adj, normalize_feats, pyg_stuff=True):
     if sp.isspmatrix(features):
         features = np.array(features.todense())
     if normalize_feats:
         features = normalize(features)
     features = torch.Tensor(features)
-#     if normalize_adj:
-#         adj = normalize(adj + sp.eye(adj.shape[0]))
-#     adj = sparse_mx_to_torch_sparse_tensor(adj)
+    if not pyg_stuff:
+        if normalize_adj:
+            adj = normalize(adj + sp.eye(adj.shape[0]))
+        adj = sparse_mx_to_torch_sparse_tensor(adj)
     
     return adj, features
 
@@ -67,15 +56,6 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     values = torch.Tensor(sparse_mx.data)
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse.FloatTensor(indices, values, shape)
-
-
-def augment(adj, features, normalize_feats=True):
-    deg = np.squeeze(np.sum(adj, axis=0).astype(int))
-    deg[deg > 5] = 5
-    deg_onehot = torch.tensor(np.eye(6)[deg], dtype=torch.float).squeeze()
-    const_f = torch.ones(features.size(0), 1)
-    features = torch.cat((features, deg_onehot, const_f), dim=1)
-    return features
 
 
 # ############### DATA SPLITS #####################################################
@@ -128,38 +108,18 @@ def bin_feat(feat, bins):
     digitized = np.digitize(feat, bins)
     return digitized - digitized.min()
 
-
-# ############### LINK PREDICTION DATA LOADERS ####################################
-
-
-def load_data_lp(dataset, use_feats, data_path):
-    if dataset in ['cora', 'pubmed']:
-        adj, features = load_citation_data(dataset, use_feats, data_path)[:2]
-    elif dataset == 'disease_lp':
-        adj, features = load_synthetic_data(dataset, use_feats, data_path)[:2]
-    elif dataset == 'airport':
-        adj, features = load_data_airport(dataset, data_path, return_label=False)
-    else:
-        raise FileNotFoundError('Dataset {} is not supported.'.format(dataset))
-    data = {'adj_train': adj, 'features': features}
-    return data
-
-
 # ############### NODE CLASSIFICATION DATA LOADERS ####################################
 
 
-def load_data_nc(dataset, use_feats, data_path, split_seed):
+def load_data_nc(dataset, use_feats, data_path, split_seed, pyg_stuff=True):
     if dataset in ['cora', 'pubmed']:
         adj, features, labels, idx_train, idx_val, idx_test = load_citation_data(
-            dataset, use_feats, data_path, split_seed
+            dataset, use_feats, data_path, split_seed, pyg_stuff
         )
     else:
         if dataset == 'disease_nc':
             adj, features, labels = load_synthetic_data(dataset, use_feats, data_path)
             val_prop, test_prop = 0.10, 0.60
-        elif dataset == 'airport':
-            adj, features, labels = load_data_airport(dataset, data_path, return_label=True)
-            val_prop, test_prop = 0.15, 0.15
         else:
             raise FileNotFoundError('Dataset {} is not supported.'.format(dataset))
         idx_val, idx_test, idx_train = split_data(labels, val_prop, test_prop, seed=split_seed)
@@ -172,7 +132,7 @@ def load_data_nc(dataset, use_feats, data_path, split_seed):
 # ############### DATASETS ####################################
 
 
-def load_citation_data(dataset_str, use_feats, data_path, split_seed=None):
+def load_citation_data(dataset_str, use_feats, data_path, split_seed=None, pyg_stuff=True):
     print('wooooooooooooooooooooooooooooooooooooooooooooo')
     names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
     objects = []
@@ -199,9 +159,11 @@ def load_citation_data(dataset_str, use_feats, data_path, split_seed=None):
     idx_val = range(len(y), len(y) + 500)
 
     adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))
-    # PYG STUFF
-    adj = from_scipy_sparse_matrix(adj)[0]
-    adj = add_self_loops(adj)[0]
+    if pyg_stuff:
+        # PYG STUFF
+        adj = from_scipy_sparse_matrix(adj)[0]
+        adj = add_self_loops(adj)[0]
+        
     if not use_feats:
         features = sp.eye(adj.shape[0])
     return adj, features, labels, idx_train, idx_val, idx_test
@@ -213,50 +175,4 @@ def parse_index_file(filename):
         index.append(int(line.strip()))
     return index
 
-
-def load_synthetic_data(dataset_str, use_feats, data_path):
-    object_to_idx = {}
-    idx_counter = 0
-    edges = []
-    with open(os.path.join(data_path, "{}.edges.csv".format(dataset_str)), 'r') as f:
-        all_edges = f.readlines()
-    for line in all_edges:
-        n1, n2 = line.rstrip().split(',')
-        if n1 in object_to_idx:
-            i = object_to_idx[n1]
-        else:
-            i = idx_counter
-            object_to_idx[n1] = i
-            idx_counter += 1
-        if n2 in object_to_idx:
-            j = object_to_idx[n2]
-        else:
-            j = idx_counter
-            object_to_idx[n2] = j
-            idx_counter += 1
-        edges.append((i, j))
-    adj = np.zeros((len(object_to_idx), len(object_to_idx)))
-    for i, j in edges:
-        adj[i, j] = 1.  # comment this line for directed adjacency matrix
-        adj[j, i] = 1.
-    if use_feats:
-        features = sp.load_npz(os.path.join(data_path, "{}.feats.npz".format(dataset_str)))
-    else:
-        features = sp.eye(adj.shape[0])
-    labels = np.load(os.path.join(data_path, "{}.labels.npy".format(dataset_str)))
-    return sp.csr_matrix(adj), features, labels
-
-
-def load_data_airport(dataset_str, data_path, return_label=False):
-    graph = pkl.load(open(os.path.join(data_path, dataset_str + '.p'), 'rb'))
-    adj = nx.adjacency_matrix(graph)
-    features = np.array([graph.node[u]['feat'] for u in graph.nodes()])
-    if return_label:
-        label_idx = 4
-        labels = features[:, label_idx]
-        features = features[:, :label_idx]
-        labels = bin_feat(labels, bins=[7.0/7, 8.0/7, 9.0/7])
-        return sp.csr_matrix(adj), features, labels
-    else:
-        return sp.csr_matrix(adj), features
 

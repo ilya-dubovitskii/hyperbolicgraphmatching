@@ -3,9 +3,7 @@ import manifolds
 import torch.nn as nn
 import torch.nn.functional as F
 
-from layers.att_layers import GraphAttentionLayer
-from layers.layers import GraphConvolution, Linear
-
+from layers.layers import Linear
 
 class Decoder(nn.Module):
     """
@@ -25,26 +23,7 @@ class Decoder(nn.Module):
         return probs
 
 
-class GCNDecoder(Decoder):
-    """
-    Graph Convolution Decoder.
-    """
 
-    def __init__(self, c, args):
-        super(GCNDecoder, self).__init__(c)
-        act = lambda x: x
-        self.cls = GraphConvolution(args.dim, args.n_classes, args.dropout, act, args.bias)
-        self.decode_adj = True
-
-
-class GATDecoder(Decoder):
-    """
-    Graph Attention Decoder.
-    """
-
-    def __init__(self, c, args):
-        super(GATDecoder, self).__init__(c)
-        self.cls = GraphAttentionLayer(args.dim, args.n_classes, args.dropout, F.elu, args.alpha, 1, True)
         self.decode_adj = True
 
 
@@ -73,12 +52,7 @@ class LinearDecoder(Decoder):
 
 
 model2decoder = {
-    'GCN': GCNDecoder,
-    'GAT': GATDecoder,
-    'HNN': LinearDecoder,
     'HGCN': LinearDecoder,
     'MyHGCN': LinearDecoder,
-    'MLP': LinearDecoder,
-    'Shallow': LinearDecoder,
 }
 

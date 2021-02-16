@@ -28,6 +28,15 @@ class Hyperboloid():
         if keepdim:
             res = res.view(res.shape + (1,))
         return res
+    
+    def inner(self, p, c, x, y=None, keepdim=True):
+        #print(x.shape, y.shape)
+        if y == None:
+            y = x
+        res = torch.sum(x * y, dim=-1) - 2 * x[..., 0] * y[..., 0]
+        if keepdim:
+            res = res.view(res.shape + (1,))
+        return res
 
     def minkowski_norm(self, u, keepdim=True):
         dot = self.minkowski_dot(u, u, keepdim=keepdim)
@@ -45,6 +54,7 @@ class Hyperboloid():
         K = 1. / c
         d = x.size(-1) - 1
         y = x.narrow(-1, 1, d)
+
         y_sqnorm = torch.norm(y, p=2, dim=1, keepdim=True) ** 2 
         mask = torch.ones_like(x)
         mask[:, 0] = 0
@@ -93,7 +103,7 @@ class Hyperboloid():
             print(f'Output: {torch.isnan(out).sum().item()} nans')
             print(f'$$$$$$ EXPMAP END $$$$$$')
         return out
-        
+      
     def logmap(self, x, y, c, verbose=False):
         if verbose:
             print(f'####### LOGMAP #######')
@@ -142,8 +152,7 @@ class Hyperboloid():
         if verbose:
             print(f'Output: {torch.isnan(out).sum().item()} nans')
             print(f'$$$$$$ EXPMAP0 END $$$$$$')
-        
-        
+
         return out
 
     def logmap0(self, x, c, desc=None, verbose=False):
@@ -244,10 +253,20 @@ class Hyperboloid():
         sqrtK = K ** 0.5
         sqnorm = torch.norm(x, p=2, dim=1, keepdim=True) ** 2
         out = sqrtK * torch.cat([K + sqnorm, 2 * sqrtK * x], dim=1) / (K - sqnorm)
-        print((K - sqnorm == 0).sum().item())
+        
         if verbose:
+            print(f'Zeros in denominator: {(K - sqnorm == 0).sum().item()}')
             print(f'Output: {torch.isnan(out).sum().item()} nans')
             print(f'$$$$$$$ TO HYPERBOLOID END $$$$$$$')
         
         return out
 
+    def egrad2rgrad(self, p, dp, c):
+        K = 1. / c
+        sqrtK = K ** 0.5
+        u = dp
+        x = p
+        u.narrow(-1, 0, 1).mul_(-1 / sqrtK)
+        u.addcmul_(self.minkowski_dot(x, u, keepdim=True).expand_as(x), x)
+        
+        return u

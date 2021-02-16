@@ -9,7 +9,7 @@ from torch.nn.modules.module import Module
 
 from torch_geometric.nn import MessagePassing
 
-from layers.att_layers import DenseAtt
+
 
 
 def get_dim_act_curv(args):
@@ -62,19 +62,18 @@ class HyperbolicGraphConvolution(nn.Module):
     Hyperbolic graph convolution layer.
     """
 
-    def __init__(self, manifold, in_features, out_features, c_in, c_out, dropout, act, use_bias, use_att, local_agg):
+    def __init__(self, manifold, in_features, out_features, c_in, c_out, dropout, act, use_bias, local_agg):
         super(HyperbolicGraphConvolution, self).__init__()
         self.linear = HypLinear(manifold, in_features, out_features, c_in, dropout, use_bias)
-        self.agg = HypAgg(manifold, c_in, out_features, dropout, use_att, local_agg)
+        self.agg = HypAgg(manifold, c_in, out_features, dropout, local_agg)
         self.hyp_act = HypAct(manifold, c_in, c_out, act)
 
-    def forward(self, input):
-        x, adj = input
+    def forward(self, x, adj):
         h = self.linear.forward(x)
         h = self.agg.forward(h, adj)
         h = self.hyp_act.forward(h)
-        output = h, adj
-        return output
+        
+        return h
 
 
 class HypLinear(nn.Module):
@@ -121,7 +120,7 @@ class HypAgg(Module):
     Hyperbolic aggregation layer.
     """
 
-    def __init__(self, manifold, c, in_features, dropout, use_att, local_agg):
+    def __init__(self, manifold, c, in_features, dropout, local_agg):
         super(HypAgg, self).__init__()
         self.manifold = manifold
         self.c = c
@@ -129,28 +128,11 @@ class HypAgg(Module):
         self.in_features = in_features
         self.dropout = dropout
         self.local_agg = local_agg
-        self.use_att = use_att
-        if self.use_att:
-            self.att = DenseAtt(in_features, dropout)
+       
 
     def forward(self, x, adj):
         x_tangent = self.manifold.logmap0(x, c=self.c)
-        if self.use_att:
-            if self.local_agg:
-                x_local_tangent = []
-                for i in range(x.size(0)):
-                    x_local_tangent.append(self.manifold.logmap(x[i], x, c=self.c))
-                x_local_tangent = torch.stack(x_local_tangent, dim=0)
-                adj_att = self.att(x_tangent, adj)
-                att_rep = adj_att.unsqueeze(-1) * x_local_tangent
-                support_t = torch.sum(adj_att.unsqueeze(-1) * x_local_tangent, dim=1)
-                output = self.manifold.proj(self.manifold.expmap(x, support_t, c=self.c), c=self.c)
-                return output
-            else:
-                adj_att = self.att(x_tangent, adj)
-                support_t = torch.matmul(adj_att, x_tangent)
-        else:
-            support_t = torch.spmm(adj, x_tangent)
+        support_t = torch.spmm(adj, x_tangent)
         output = self.manifold.proj(self.manifold.expmap0(support_t, c=self.c), c=self.c)
         return output
 
@@ -173,6 +155,7 @@ class HypAct(Module):
     def forward(self, x):
         xt = self.act(self.manifold.logmap0(x, c=self.c_in))
         xt = self.manifold.proj_tan0(xt, c=self.c_out)
+        
         return self.manifold.proj(self.manifold.expmap0(xt, c=self.c_out), c=self.c_out)
 
     def extra_repr(self):
@@ -180,41 +163,40 @@ class HypAct(Module):
             self.c_in, self.c_out
         )
 
+
 class MyHyperbolicGraphConvolution(MessagePassing):
-    
-    def __init__(self, manifold, in_channels, out_channels, c, c1, dropout, act, use_bias, use_att, local_agg, verbose=False):
+    def __init__(self, in_channels, out_channels, manifold, c, verbose=False):
         super().__init__(aggr='add')
         self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
-        self.bias = nn.Parameter(torch.Tensor(out_channels))
+#         self.bias = nn.Parameter(torch.Tensor(out_channels))
         self.manifold = manifold
         self.c = c
         self.verbose = verbose
         self.reset_parameters()
         
     def reset_parameters(self):
-        init.xavier_uniform_(self.weight, gain=math.sqrt(2))
-        init.constant_(self.bias, 0)
+        init.xavier_uniform_(self.weight, gain=1)
+#         init.constant_(self.bias, 0)
     
-    def message(self, x_i, x_j, verbose=False):
-        if verbose:
+    def message(self, x_i, x_j):
+        if self.verbose:
             print('--------------------MESSAGE--------------------------')
-        out = self.manifold.mobius_matvec(self.weight, x_j, self.c, verbose)
-        out = self.manifold.logmap(out, x_i, self.c, verbose)
-        if verbose:
+        out = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
+        out = self.manifold.logmap(out, x_i, self.c, self.verbose)
+        if self.verbose:
             print('++++++++++++++++++++MESSAGE++++++++++++++++++++++++++')
         return out
         
-    def update(self, x_j, x=None, verbose=False):
-        if verbose:
+    def update(self, x_j, x=None):
+        if self.verbose:
             print('----------------------UPDATE-------------------------')
-        x = self.manifold.expmap(x_j, x, self.c, verbose)
-        x = self.manifold.to_poincare(x, self.c, verbose)
+        x = self.manifold.expmap(x_j, x, self.c, self.verbose)
+        x = self.manifold.to_poincare(x, self.c, self.verbose)
         x = F.relu(x)
-        x = self.manifold.to_hyperboloid(x, self.c, verbose)
-        if verbose:
+        x = self.manifold.to_hyperboloid(x, self.c, self.verbose)
+        if self.verbose:
             print('++++++++++++++++++++++UPDATE++++++++++++++++++++++++++')
         return x
         
-    def forward(self, input):
-        x, edge_index = input
-        return self.propagate(edge_index, x=x), edge_index
+    def forward(self, x, edge_index):
+        return self.propagate(edge_index, x=x)

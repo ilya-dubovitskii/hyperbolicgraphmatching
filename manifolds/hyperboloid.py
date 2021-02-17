@@ -195,6 +195,7 @@ class Hyperboloid():
         u = self.logmap0(x, c)
         if verbose:
             print(f'After logmap0: {torch.isnan(u).sum().item()} nans')
+            print(f'u shape: {u.shape}, w^T shape: {m.transpose(-1, -2).shape}')
         
         mu = u @ m.transpose(-1, -2)
         if verbose:

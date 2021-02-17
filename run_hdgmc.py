@@ -33,7 +33,7 @@ data = DBP15K(path, args.category, transform=SumEmbedding())[0].to(device)
 
 
 
-psi_1 = HyperbolicRelCNN(100, 100, args.num_layers, batch_norm=False,
+psi_1 = HyperbolicRelCNN(100, 20, args.num_layers, batch_norm=False,
                cat=True, lin=False, dropout=0.5)
 
 # psi_1 = MyHGCN()

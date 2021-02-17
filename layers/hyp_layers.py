@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import torch.nn.init as init
 from torch.nn.modules.module import Module
 
+from torch_scatter import gather_csr, scatter, segment_csr
 from torch_geometric.nn import MessagePassing
 
 
@@ -177,19 +178,35 @@ class MyHyperbolicGraphConvolution(MessagePassing):
     def reset_parameters(self):
         init.xavier_uniform_(self.weight, gain=1)
 #         init.constant_(self.bias, 0)
+
+    def aggregate(self, x_i, x_j, index, ptr=None, dim_size=None):
+        if ptr is not None:
+            ptr = expand_left(ptr, dim=self.node_dim, dims=inputs.dim())
+            return segment_csr(inputs, ptr, reduce=self.aggr)
+        else:
+            if self.verbose:
+                print('--------------------AGGREGATE--------------------------')
+                print(f'x_i shape: {x_i.shape}, x_j shape: {x_j.shape}')
+            x_j = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
+            x_j = self.manifold.logmap(x_j, x_i, self.c, self.verbose)
+            if self.verbose:
+                print('++++++++++++++++++++AGGREGATE++++++++++++++++++++++++++')
+            return scatter(x_j, index, dim=self.node_dim, dim_size=dim_size,
+                           reduce=self.aggr)
     
-    def message(self, x_i, x_j):
+    def message(self, x_j):
         if self.verbose:
             print('--------------------MESSAGE--------------------------')
         out = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
-        out = self.manifold.logmap(out, x_i, self.c, self.verbose)
         if self.verbose:
             print('++++++++++++++++++++MESSAGE++++++++++++++++++++++++++')
         return out
         
-    def update(self, x_j, x=None):
+    def update(self, x_j, x):
         if self.verbose:
             print('----------------------UPDATE-------------------------')
+            print(f'x shape: {x.shape}, x_j shape: {x_j.shape}')
+        x = self.manifold.mobius_matvec(self.weight, x, self.c, self.verbose)
         x = self.manifold.expmap(x_j, x, self.c, self.verbose)
         x = self.manifold.to_poincare(x, self.c, self.verbose)
         x = F.relu(x)

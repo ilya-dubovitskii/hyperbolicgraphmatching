@@ -3,3 +3,6 @@
 .idea
 .ipynb_checkpoints
 __pycache__
+debug_hdgmc.py
+progress_report
+*.ipynb

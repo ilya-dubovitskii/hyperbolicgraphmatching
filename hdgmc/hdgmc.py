@@ -288,6 +288,24 @@ class HDGMC(torch.nn.Module):
         h_t = self.psi_1(x_t, edge_index_t, edge_attr_t)
 
         h_s, h_t = (h_s.detach(), h_t.detach()) if self.detach else (h_s, h_t)
+        
+        print('-------------------------')
+        print(f'{(h_s == 0).sum()} zeros out of {h_s.numel()} elements, {(h_s == 0).sum().float() / h_s.numel():.02f}')
+        print(f'{(h_t == 0).sum()} zeros out of {h_t.numel()} elements, {(h_t == 0).sum().float() / h_t.numel():.02f}')
+        print(f'shapes: {h_s.shape}, {h_t.shape}')
+       
+        
+        norm_s = Hyperboloid().minkowski_norm(h_s)
+        valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
+        valid_s = valid_s.float() / h_s.shape[-2] 
+        
+        norm_t = Hyperboloid().minkowski_norm(h_t)
+        valid_t = ((norm_t > -1.1) & (norm_t < -0.9)).sum()
+        valid_t = valid_t.float() / h_t.shape[-2] 
+        
+        print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
+        print(f'norms: {norm_s[:10].squeeze().cpu().detach().numpy().round(2)}, {norm_t[:10].squeeze().cpu().detach().numpy().round(2)}')
+        print('++++++++++++++++++++++++++')
 
         h_s, s_mask = to_dense_batch(h_s, batch_s, fill_value=0)
         h_t, t_mask = to_dense_batch(h_t, batch_t, fill_value=0)

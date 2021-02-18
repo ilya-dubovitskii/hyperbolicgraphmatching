@@ -148,7 +148,6 @@ class Hyperboloid():
             print(f'zeros in denominator {(x_norm == 0).sum().item()}')
             print(f'theta: {torch.isnan(theta).sum().item()}, cosh: {torch.isnan(cosh(theta)).sum().item()}, sinh: {torch.isnan(sinh(theta)).sum().item()}')
             print(f'Before proj: {torch.isnan(res).sum().item()} nans')
-        out = self.proj(res, c)
         if verbose:
             print(f'Output: {torch.isnan(out).sum().item()} nans')
             print(f'$$$$$$ EXPMAP0 END $$$$$$')

@@ -110,28 +110,29 @@ for epoch in range(100):
                f'Hits@10: {hits10:.4f}'))
     
 
-plt.figure(figsize=(10,10))
+plt.figure(figsize=(20,20))
+plt.subplot(2, 2, 1)
 plt.plot(loss_history_train, label='train')
 plt.plot(loss_history_test, label='test')
 plt.title('loss')
 plt.xlabel('epoch')
 plt.legend()
-plt.savefig('../loss.png')
 
 
-plt.figure(figsize=(10,10))
+
+plt.subplot(2, 2, 2)
 plt.plot(hits1_history_train, label='train')
 plt.plot(hits1_history_test, label='test')
 plt.title('hits1')
 plt.xlabel('epoch')
 plt.legend()
-plt.savefig('../hits1.png')
 
 
-plt.figure(figsize=(10,10))
+
+plt.subplot(2, 2, 3)
 plt.plot(hits10_history_train, label='train')
 plt.plot(hits10_history_test, label='test')
 plt.title('hits10')
 plt.xlabel('epoch')
 plt.legend()
-plt.savefig('../hits10.png')
+plt.savefig('progress_report/results_first_run.png')

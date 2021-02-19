@@ -220,8 +220,9 @@ class HDGMC(torch.nn.Module):
         reset(self.mlp)
 
     def __top_k__(self, x_s, x_t):  # pragma: no cover
-            S_ij = (x_s @ x_t.transpose(-1, -2)) - 2 * torch.einsum('bi,bj->bij', (x_s[..., : , 0], x_t[..., : , 0]))
-            return S_ij.topk(self.k, dim=2)[1]
+        S_ij = (x_s @ x_t.transpose(-1, -2)) - 2 * torch.einsum('bi,bj->bij', (x_s[..., : , 0], x_t[..., : , 0]))
+        
+        return S_ij.topk(self.k, dim=2)[1]
 
     def __include_gt__(self, S_idx, s_mask, y):
         r"""Includes the ground-truth values in :obj:`y` to the index tensor

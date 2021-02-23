@@ -16,7 +16,9 @@ from models.base_models import NCModel
 from utils.data_utils import load_data
 from utils.train_utils import get_dir_name, format_metrics
 from torch.optim import Adam
+import manifolds
 
+hyp = manifolds.Hyperboloid()
 
 def train(args):
     np.random.seed(args.seed)
@@ -86,11 +88,38 @@ def train(args):
     best_val_metrics = model.init_metric_dict()
     best_test_metrics = None
     best_emb = None
+    
+    h_s = data['features']
+    print(f'SHAPE AT THE START, {h_s.shape}, NORM: {h_s.norm(dim=-1).median()}')
+    h_s = hyp.expmap0(h_s, c=1)
+    h_s = hyp.proj(h_s, c=1)
+
+    norm_s = hyp.minkowski_dot(h_s, h_s)
+    valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
+    valid_s = valid_s.float() / h_s.shape[-2] 
+
+    print('AT THE START')
+    print(f'on hyperboloid: {valid_s:.02f}')
+    print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}')
+    
     for epoch in range(args.epochs):
         t = time.time()
         model.train()
         optimizer.zero_grad()
         embeddings = model.encode(data['features'], data['adj_train_norm'])
+        h_s = embeddings
+        h_s = hyp.expmap0(h_s, c=1)
+        h_s = hyp.proj(h_s, c=1)
+
+        norm_s = hyp.minkowski_dot(h_s, h_s)
+        valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
+        valid_s = valid_s.float() / h_s.shape[-2] 
+
+        print(f'EPOCH {epoch} ================')
+        print(f'on hyperboloid: {valid_s:.02f}')
+        print(f'norms: {norm_s.mean().cpu().detach().numpy()}')
+        print('========================')
+        
         train_metrics = model.compute_metrics(embeddings, data, 'train')
         train_metrics['loss'].backward()
         if args.grad_clip is not None:

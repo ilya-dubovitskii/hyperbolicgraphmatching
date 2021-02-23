@@ -11,6 +11,7 @@ from torch_scatter import gather_csr, scatter, segment_csr
 from torch_geometric.nn import MessagePassing
 
 
+import numpy as np
 
 
 def get_dim_act_curv(args):
@@ -95,7 +96,7 @@ class HypLinear(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        init.xavier_uniform_(self.weight, gain=math.sqrt(2))
+        init.xavier_uniform_(self.weight, gain=math.sqrt(1))
         init.constant_(self.bias, 0)
 
     def forward(self, x):
@@ -177,6 +178,7 @@ class MyHyperbolicGraphConvolution(MessagePassing):
         
     def reset_parameters(self):
         init.xavier_uniform_(self.weight, gain=1)
+        print(f'shape: {self.weight.shape}, norm: {np.linalg.norm(self.weight.detach().cpu().numpy(), ord=2)}')
 #         init.constant_(self.bias, 0)
 
     def aggregate(self, x_i, x_j, index, ptr=None, dim_size=None):
@@ -200,6 +202,8 @@ class MyHyperbolicGraphConvolution(MessagePassing):
         out = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
         if self.verbose:
             print('++++++++++++++++++++MESSAGE++++++++++++++++++++++++++')
+        if self.weight.grad is not None:
+            print(f'THE GRADIENT OF THE WEIGHT IS {self.weight.grad.abs().sum()}')
         return out
         
     def update(self, x_j, x):

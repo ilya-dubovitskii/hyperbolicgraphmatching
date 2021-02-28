@@ -127,6 +127,14 @@ def train(args):
             all_params = list(model.parameters())
             for param in all_params:
                 torch.nn.utils.clip_grad_norm_(param, max_norm)
+                
+        if pyg_stuff == True:
+            print(f'GRAD NORM IS: {model.encoder.layers[0].weight.grad.norm()}')
+        else:
+            print(f'GRAD NORM IS: {model.encoder.layers[0].linear.weight.grad.norm()}')
+        
+        print(f'DECODER GRAD NORM IS: {model.decoder.cls.linear.weight.grad.norm()}')
+        
         optimizer.step()
         
         lr_scheduler.step()

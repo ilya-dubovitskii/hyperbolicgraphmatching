@@ -10,8 +10,15 @@ from torch.nn.modules.module import Module
 from torch_scatter import gather_csr, scatter, segment_csr
 from torch_geometric.nn import MessagePassing
 
+
 import numpy as np
 
+def hook_fn(grad, msg=None):
+#     print(f'\n------------{msg}------------')
+#     print(f'the norm is: {grad.norm()}')
+#     print(f'++++++++++++{msg}++++++++++++\n')
+    
+    return grad
 
 def get_dim_act_curv(args):
     """
@@ -95,7 +102,8 @@ class HypLinear(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        init.xavier_uniform_(self.weight, gain=math.sqrt(2))
+        torch.manual_seed(123)
+        init.xavier_uniform_(self.weight, gain=math.sqrt(1))
         init.constant_(self.bias, 0)
 
     def forward(self, x):
@@ -167,8 +175,8 @@ class HypAct(Module):
 
 class MyHyperbolicGraphConvolution(MessagePassing):
     def __init__(self, in_channels, out_channels, manifold, c, verbose=False):
-        super().__init__(aggr='sum')
-        print('what')
+        super().__init__(aggr='add')
+#         print('what')
         self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
 #         self.bias = nn.Parameter(torch.Tensor(out_channels))
         self.manifold = manifold
@@ -177,12 +185,14 @@ class MyHyperbolicGraphConvolution(MessagePassing):
         self.reset_parameters()
         
     def reset_parameters(self):
-        init.xavier_uniform_(self.weight, gain=0.7)
-        print(f'weights shape: {self.weight.shape}')
-        print(f'weight norm: {np.linalg.norm(self.weight.detach().cpu().numpy(), ord=2)}')
+        torch.manual_seed(123)
+        init.xavier_uniform_(self.weight, gain=1)
+       
+        print(f'shape: {self.weight.shape}, norm: {np.linalg.norm(self.weight.detach().cpu().numpy(), ord=2)}')
 #         init.constant_(self.bias, 0)
 
     def aggregate(self, x_i, x_j, index, ptr=None, dim_size=None):
+        print('AGGREGATE CALL')
         if ptr is not None:
             ptr = expand_left(ptr, dim=self.node_dim, dims=inputs.dim())
             return segment_csr(inputs, ptr, reduce=self.aggr)
@@ -190,32 +200,50 @@ class MyHyperbolicGraphConvolution(MessagePassing):
             if self.verbose:
                 print('--------------------AGGREGATE--------------------------')
                 print(f'x_i shape: {x_i.shape}, x_j shape: {x_j.shape}')
+            x_j.requires_grad_(True)
+            x_j.register_hook(lambda grad: hook_fn(grad, msg='AGGREGATE BEFORE MATVEC'))
             x_j = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
+            x_j.register_hook(lambda grad: hook_fn(grad, msg='AGGREGATE AFTER MATVEC'))   
             x_j = self.manifold.logmap(x_j, x_i, self.c, self.verbose)
+            x_j.register_hook(lambda grad: hook_fn(grad, msg='AGGREGATE AFTER LOGMAP'))
             if self.verbose:
                 print('++++++++++++++++++++AGGREGATE++++++++++++++++++++++++++')
             return scatter(x_j, index, dim=self.node_dim, dim_size=dim_size,
                            reduce=self.aggr)
     
     def message(self, x_j):
+        print('MESSAGE CALL')
         if self.verbose:
             print('--------------------MESSAGE--------------------------')
+        x_j.requires_grad_(True)
+        x_j.register_hook(lambda grad: hook_fn(grad, msg='MESSAGE BEFORE MATVEC'))
         out = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
+        out.register_hook(lambda grad: hook_fn(grad, msg='MESSAGE AFTER MATVEC'))
         if self.verbose:
             print('++++++++++++++++++++MESSAGE++++++++++++++++++++++++++')
+        
         return out
         
     def update(self, x_j, x):
+        print('UPDATE CALL')
         if self.verbose:
             print('----------------------UPDATE-------------------------')
             print(f'x shape: {x.shape}, x_j shape: {x_j.shape}')
+        x.requires_grad_(True)
+        x.register_hook(lambda grad: hook_fn(grad, msg='UPDATE BEFORE MATVEC'))
         x = self.manifold.mobius_matvec(self.weight, x, self.c, self.verbose)
+        x.register_hook(lambda grad: hook_fn(grad, msg='UPDATE AFTER MATVEC'))
         x = self.manifold.expmap(x_j, x, self.c, self.verbose)
+        x.register_hook(lambda grad: hook_fn(grad, msg='UPDATE AFTER EXPMAP'))
         x = self.manifold.to_poincare(x, self.c, self.verbose)
+        x.register_hook(lambda grad: hook_fn(grad, msg='UPDATE AFTER TO_POINCARE'))
         x = F.relu(x)
+        x.register_hook(lambda grad: hook_fn(grad, msg='UPDATE AFTER RELU'))
         x = self.manifold.to_hyperboloid(x, self.c, self.verbose)
+        x.register_hook(lambda grad: hook_fn(grad, msg='UPDATE AFTER TO_HYPERBOLOID'))
         if self.verbose:
             print('++++++++++++++++++++++UPDATE++++++++++++++++++++++++++')
+                        
         return x
         
     def forward(self, x, edge_index):

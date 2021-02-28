@@ -11,7 +11,7 @@ from torch_geometric.nn.inits import reset
 
 
 from manifolds.hyperboloid import Hyperboloid
-from layers.hyp_layers import MyHyperbolicGraphConvolution
+from layers.hyp_layers import MyHyperbolicGraphConvolution, HypLinear
 from layers.rel import RelConv
 
 import math
@@ -24,7 +24,12 @@ except ImportError:
     LazyTensor = None
 
     
-
+def hook_fn(grad, msg=None):
+    print(f'\n------------{msg}------------')
+    print(f'the norm is: {grad.norm()}')
+    print(f'++++++++++++{msg}++++++++++++\n')
+    
+    return grad
 
 class RelCNN(torch.nn.Module):
     def __init__(self, in_channels, out_channels, num_layers, batch_norm=False,
@@ -102,7 +107,7 @@ class HyperbolicRelCNN(torch.nn.Module):
 
         self.convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()
-        for _ in range(num_layers):
+        for _ in range(1):
             self.convs.append(MyHyperbolicGraphConvolution(in_channels, out_channels, Hyperboloid(), 1))
             self.batch_norms.append(nn.Identity())
             in_channels = out_channels
@@ -114,7 +119,7 @@ class HyperbolicRelCNN(torch.nn.Module):
 
         if self.lin:
             self.out_channels = out_channels
-            self.final = Lin(in_channels, out_channels)
+            self.final = HypLinear(Hyperboloid(), in_channels, out_channels, 1, False, False)
         else:
             self.out_channels = in_channels
 
@@ -123,7 +128,7 @@ class HyperbolicRelCNN(torch.nn.Module):
     def reset_parameters(self):
         for conv, batch_norm in zip(self.convs, self.batch_norms):
             conv.reset_parameters()
-            #batch_norm.reset_parameters()
+#             batch_norm.reset_parameters()
         if self.lin:
             self.final.reset_parameters()
 
@@ -222,8 +227,9 @@ class HDGMC(torch.nn.Module):
         reset(self.mlp)
 
     def __top_k__(self, x_s, x_t):  # pragma: no cover
-            S_ij = (x_s @ x_t.transpose(-1, -2)) - 2 * torch.einsum('bi,bj->bij', (x_s[..., : , 0], x_t[..., : , 0]))
-            return S_ij.topk(self.k, dim=2)[1]
+        S_ij = (x_s @ x_t.transpose(-1, -2)) - 2 * torch.einsum('bi,bj->bij', (x_s[..., : , 0], x_t[..., : , 0]))
+        
+        return S_ij.topk(self.k, dim=2)[1]
 
     def __include_gt__(self, S_idx, s_mask, y):
         r"""Includes the ground-truth values in :obj:`y` to the index tensor
@@ -283,23 +289,24 @@ class HDGMC(torch.nn.Module):
 
         h_s, h_t = (h_s.detach(), h_t.detach()) if self.detach else (h_s, h_t)
         
-#         print('-------------------------')
-#         print(f'{(h_s == 0).sum()} zeros out of {h_s.numel()} elements, {(h_s == 0).sum().float() / h_s.numel():.02f}')
-#         print(f'{(h_t == 0).sum()} zeros out of {h_t.numel()} elements, {(h_t == 0).sum().float() / h_t.numel():.02f}')
-#         print(f'shapes: {h_s.shape}, {h_t.shape}')
+        print('-----------HYPERBOLOID CHECK IN HDGMC--------------')
        
         
-#         norm_s = Hyperboloid().minkowski_dot(h_s, h_s)
-#         valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
-#         valid_s = valid_s.float() / h_s.shape[-2] 
+        norm_s = Hyperboloid().minkowski_dot(h_s, h_s)
+        valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
+        valid_s = valid_s.float() / h_s.shape[-2] 
         
-#         norm_t = Hyperboloid().minkowski_dot(h_t, h_t)
-#         valid_t = ((norm_t > -1.1) & (norm_t < -0.9)).sum()
-#         valid_t = valid_t.float() / h_t.shape[-2] 
+        norm_t = Hyperboloid().minkowski_dot(h_t, h_t)
+        valid_t = ((norm_t > -1.1) & (norm_t < -0.9)).sum()
+        valid_t = valid_t.float() / h_t.shape[-2] 
         
-#         print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
-#         print(f'norms: {norm_s[:10].squeeze().cpu().detach().numpy().round(2)}, {norm_t[:10].squeeze().cpu().detach().numpy().round(2)}')
-#         print('++++++++++++++++++++++++++')
+        print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
+        print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}, {norm_t.mean().cpu().detach().numpy().round(2)}')
+        
+        print(f'nans: {torch.isnan(h_s).sum().item()} nans')
+        print('++++++++++++HYPERBOLOID CHECK IN HDGMC++++++++++++++')
+        
+        
 
         h_s, s_mask = to_dense_batch(h_s, batch_s, fill_value=0)
         h_t, t_mask = to_dense_batch(h_t, batch_t, fill_value=0)
@@ -312,7 +319,7 @@ class HDGMC(torch.nn.Module):
 
         if self.k < 1:
             # ------ Dense variant ------ #
-            print('wow this is bullshit')
+#             print('wow this is bullshit')
             S_hat = h_s @ h_t.transpose(-1, -2) - 2 * torch.einsum('bi,bj->bij', (x_s[..., : , 0], x_t[..., : , 0]))  # [B, N_s, N_t, C_out]
             S_mask = s_mask.view(B, N_s, 1) & t_mask.view(B, 1, N_t)
             S_0 = masked_softmax(S_hat, S_mask, dim=-1)[s_mask]
@@ -393,6 +400,10 @@ class HDGMC(torch.nn.Module):
                 idx, S_L.view(-1), size, requires_grad=S_L.requires_grad)
             S_sparse_L.__idx__ = S_idx
             S_sparse_L.__val__ = S_L
+            
+#             print(f'S 0: {torch.isnan(S_sparse_0).any().item()} nans')
+#             print(f'S L: {torch.isnan(S_sparse_L).any().item()} nans')
+            S_L.register_hook(lambda grad: hook_fn(grad, msg='HDGMC FINAL'))
 
             return S_sparse_0, S_sparse_L
 
@@ -416,7 +427,14 @@ class HDGMC(torch.nn.Module):
             assert S.__idx__ is not None and S.__val__ is not None
             mask = S.__idx__[y[0]] == y[1].view(-1, 1)
             val = S.__val__[[y[0]]][mask]
+            
+#         print(f'mask: {mask}')
+#         print(f'mask: {mask.sum()}')
+#         print(f'value: {val}')
         nll = -torch.log(val + EPS)
+#         print(f'nll1: {torch.isnan(nll).any().item()} nans')
+#         print(f'nll2: value is {nll}')
+#         print(f'nll2: {torch.isnan(getattr(torch, reduction)(nll)).any().item()} nans')
         return nll if reduction == 'none' else getattr(torch, reduction)(nll)
 
     def acc(self, S, y, reduction='mean'):

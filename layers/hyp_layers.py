@@ -202,8 +202,7 @@ class MyHyperbolicGraphConvolution(MessagePassing):
         out = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
         if self.verbose:
             print('++++++++++++++++++++MESSAGE++++++++++++++++++++++++++')
-        if self.weight.grad is not None:
-            print(f'THE GRADIENT OF THE WEIGHT IS {self.weight.grad.abs().sum()}')
+        
         return out
         
     def update(self, x_j, x):

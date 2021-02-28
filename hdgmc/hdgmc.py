@@ -16,6 +16,8 @@ from layers.rel import RelConv
 
 import math
 
+
+
 try:
     from pykeops.torch import LazyTensor
 except ImportError:
@@ -287,11 +289,11 @@ class HDGMC(torch.nn.Module):
 #         print(f'shapes: {h_s.shape}, {h_t.shape}')
        
         
-#         norm_s = Hyperboloid().minkowski_norm(h_s)
+#         norm_s = Hyperboloid().minkowski_dot(h_s, h_s)
 #         valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
 #         valid_s = valid_s.float() / h_s.shape[-2] 
         
-#         norm_t = Hyperboloid().minkowski_norm(h_t)
+#         norm_t = Hyperboloid().minkowski_dot(h_t, h_t)
 #         valid_t = ((norm_t > -1.1) & (norm_t < -0.9)).sum()
 #         valid_t = valid_t.float() / h_t.shape[-2] 
         

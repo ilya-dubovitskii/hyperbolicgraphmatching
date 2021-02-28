@@ -10,7 +10,7 @@ from torch.nn.modules.module import Module
 from torch_scatter import gather_csr, scatter, segment_csr
 from torch_geometric.nn import MessagePassing
 
-
+import numpy as np
 
 
 def get_dim_act_curv(args):
@@ -167,7 +167,8 @@ class HypAct(Module):
 
 class MyHyperbolicGraphConvolution(MessagePassing):
     def __init__(self, in_channels, out_channels, manifold, c, verbose=False):
-        super().__init__(aggr='add')
+        super().__init__(aggr='sum')
+        print('what')
         self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
 #         self.bias = nn.Parameter(torch.Tensor(out_channels))
         self.manifold = manifold
@@ -176,7 +177,9 @@ class MyHyperbolicGraphConvolution(MessagePassing):
         self.reset_parameters()
         
     def reset_parameters(self):
-        init.xavier_uniform_(self.weight, gain=1)
+        init.xavier_uniform_(self.weight, gain=0.7)
+        print(f'weights shape: {self.weight.shape}')
+        print(f'weight norm: {np.linalg.norm(self.weight.detach().cpu().numpy(), ord=2)}')
 #         init.constant_(self.bias, 0)
 
     def aggregate(self, x_i, x_j, index, ptr=None, dim_size=None):

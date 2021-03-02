@@ -25,9 +25,9 @@ except ImportError:
 
     
 def hook_fn(grad, msg=None):
-    print(f'\n------------{msg}------------')
-    print(f'the norm is: {grad.norm()}')
-    print(f'++++++++++++{msg}++++++++++++\n')
+#     print(f'\n------------{msg}------------')
+#     print(f'the norm is: {grad.norm()}')
+#     print(f'++++++++++++{msg}++++++++++++\n')
     
     return grad
 
@@ -214,7 +214,7 @@ class HDGMC(torch.nn.Module):
         self.k = k
         self.detach = detach
         self.backend = 'auto'
-
+        self.hyp = Hyperboloid()
         self.mlp = Seq(
             Lin(psi_2.out_channels, psi_2.out_channels),
             ReLU(),
@@ -289,22 +289,22 @@ class HDGMC(torch.nn.Module):
 
         h_s, h_t = (h_s.detach(), h_t.detach()) if self.detach else (h_s, h_t)
         
-        print('-----------HYPERBOLOID CHECK IN HDGMC--------------')
+#         print('-----------HYPERBOLOID CHECK IN HDGMC--------------')
        
         
-        norm_s = Hyperboloid().minkowski_dot(h_s, h_s)
-        valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
-        valid_s = valid_s.float() / h_s.shape[-2] 
+#         norm_s = Hyperboloid().minkowski_dot(h_s, h_s)
+#         valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
+#         valid_s = valid_s.float() / h_s.shape[-2] 
         
-        norm_t = Hyperboloid().minkowski_dot(h_t, h_t)
-        valid_t = ((norm_t > -1.1) & (norm_t < -0.9)).sum()
-        valid_t = valid_t.float() / h_t.shape[-2] 
+#         norm_t = Hyperboloid().minkowski_dot(h_t, h_t)
+#         valid_t = ((norm_t > -1.1) & (norm_t < -0.9)).sum()
+#         valid_t = valid_t.float() / h_t.shape[-2] 
         
-        print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
-        print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}, {norm_t.mean().cpu().detach().numpy().round(2)}')
+#         print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
+#         print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}, {norm_t.mean().cpu().detach().numpy().round(2)}')
         
-        print(f'nans: {torch.isnan(h_s).sum().item()} nans')
-        print('++++++++++++HYPERBOLOID CHECK IN HDGMC++++++++++++++')
+#         print(f'nans: {torch.isnan(h_s).sum().item()} nans')
+#         print('++++++++++++HYPERBOLOID CHECK IN HDGMC++++++++++++++')
         
         
 
@@ -319,8 +319,9 @@ class HDGMC(torch.nn.Module):
 
         if self.k < 1:
             # ------ Dense variant ------ #
+            print(self.k)
 #             print('wow this is bullshit')
-            S_hat = h_s @ h_t.transpose(-1, -2) - 2 * torch.einsum('bi,bj->bij', (x_s[..., : , 0], x_t[..., : , 0]))  # [B, N_s, N_t, C_out]
+            S_hat = h_s @ h_t.transpose(-1, -2) - 2 * torch.einsum('i,j->ij', (x_s[..., : , 0], x_t[..., : , 0]))  # [B, N_s, N_t, C_out]
             S_mask = s_mask.view(B, N_s, 1) & t_mask.view(B, 1, N_t)
             S_0 = masked_softmax(S_hat, S_mask, dim=-1)[s_mask]
 
@@ -358,7 +359,10 @@ class HDGMC(torch.nn.Module):
             tmp_s = h_s.view(B, N_s, 1, C_out)
             idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, C_out)
             tmp_t = torch.gather(h_t.view(B, N_t, C_out), -2, idx)
-            S_hat = (tmp_s * tmp_t.view(B, N_s, k, C_out)).sum(dim=-1)
+            S_hat = (tmp_s * tmp_t.view(B, N_s, k, C_out)).sum(dim=-1) - 2 * (tmp_s[..., 0] * tmp_t.view(B, N_s, k, C_out)[..., 0])
+#             print('....................')
+#             print((tmp_s * tmp_t.view(B, N_s, k, C_out)).sum(dim=-1).shape, (tmp_s[..., 0] * tmp_t.view(B, N_s, k, C_out)[..., 0]).shape)
+#             print('.........................')
             S_0 = S_hat.softmax(dim=-1)[s_mask]
 
             for _ in range(self.num_steps):
@@ -370,7 +374,15 @@ class HDGMC(torch.nn.Module):
                 tmp_t = tmp_t.view(B, N_s * k, R_in)
                 idx = S_idx.view(B, N_s * k, 1)
                 r_t = scatter_add(tmp_t, idx, dim=1, dim_size=N_t)
+                
+#                 r_s = self.hyp.proj_tan0(r_s, c=1)
+                r_s = self.hyp.expmap0(r_s, c=1)
+                r_s = self.hyp.proj(r_s, c=1)
 
+#                 r_t = self.hyp.proj_tan0(r_t, c=1)
+                r_t = self.hyp.expmap0(r_t, c=1)
+                r_t = self.hyp.proj(r_t, c=1)
+                
                 r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
                 o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
                 o_t = self.psi_2(r_t, edge_index_t, edge_attr_t)
@@ -403,7 +415,7 @@ class HDGMC(torch.nn.Module):
             
 #             print(f'S 0: {torch.isnan(S_sparse_0).any().item()} nans')
 #             print(f'S L: {torch.isnan(S_sparse_L).any().item()} nans')
-            S_L.register_hook(lambda grad: hook_fn(grad, msg='HDGMC FINAL'))
+#             S_L.register_hook(lambda grad: hook_fn(grad, msg='HDGMC FINAL'))
 
             return S_sparse_0, S_sparse_L
 
@@ -488,3 +500,178 @@ class HDGMC(torch.nn.Module):
                 '    num_steps={}, k={}\n)').format(self.__class__.__name__,
                                                     self.psi_1, self.psi_2,
                                                     self.num_steps, self.k)
+
+class HDGMC_ver1(HDGMC):
+    def __init__(self, psi_1, psi_2, num_steps, k=-1, detach=False):
+        super().__init__(psi_1, psi_2, num_steps, k=k, detach=False)
+        self.hyp = Hyperboloid()
+        
+    def __top__k(self, x_s, x_t):
+        x_s = self.hyp.proj_tan0(self.hyp.logmap0(x_s, c=1), c=1)
+        x_t = self.hyp.proj_tan0(self.hyp.logmap0(x_t, c=1), c=1)
+        
+        S_ij = (x_s @ x_t.transpose(-1, -2))
+        
+        return S_ij.topk(self.k, dim=2)[1]
+    
+    def forward(self, x_s, edge_index_s, edge_attr_s, batch_s, x_t,
+                edge_index_t, edge_attr_t, batch_t, y=None):
+        r"""
+        Args:
+            x_s (Tensor): Source graph node features of shape
+                :obj:`[batch_size * num_nodes, C_in]`.
+            edge_index_s (LongTensor): Source graph edge connectivity of shape
+                :obj:`[2, num_edges]`.
+            edge_attr_s (Tensor): Source graph edge features of shape
+                :obj:`[num_edges, D]`. Set to :obj:`None` if the GNNs are not
+                taking edge features into account.
+            batch_s (LongTensor): Source graph batch vector of shape
+                :obj:`[batch_size * num_nodes]` indicating node to graph
+                assignment. Set to :obj:`None` if operating on single graphs.
+            x_t (Tensor): Target graph node features of shape
+                :obj:`[batch_size * num_nodes, C_in]`.
+            edge_index_t (LongTensor): Target graph edge connectivity of shape
+                :obj:`[2, num_edges]`.
+            edge_attr_t (Tensor): Target graph edge features of shape
+                :obj:`[num_edges, D]`. Set to :obj:`None` if the GNNs are not
+                taking edge features into account.
+            batch_s (LongTensor): Target graph batch vector of shape
+                :obj:`[batch_size * num_nodes]` indicating node to graph
+                assignment. Set to :obj:`None` if operating on single graphs.
+            y (LongTensor, optional): Ground-truth matchings of shape
+                :obj:`[2, num_ground_truths]` to include ground-truth values
+                when training against sparse correspondences. Ground-truths
+                are only used in case the model is in training mode.
+                (default: :obj:`None`)
+
+        Returns:
+            Initial and refined correspondence matrices :obj:`(S_0, S_L)`
+            of shapes :obj:`[batch_size * num_nodes, num_nodes]`. The
+            correspondence matrix are either given as dense or sparse matrices.
+        """
+        h_s = self.psi_1(x_s, edge_index_s, edge_attr_s)
+        h_t = self.psi_1(x_t, edge_index_t, edge_attr_t)
+        
+        h_s = self.hyp.proj_tan0(self.hyp.logmap0(h_s, c=1), c=1)
+        h_t = self.hyp.proj_tan0(self.hyp.logmap0(h_t, c=1), c=1)
+        
+        h_s, h_t = (h_s.detach(), h_t.detach()) if self.detach else (h_s, h_t)
+        
+#         print('-----------HYPERBOLOID CHECK IN HDGMC--------------')
+       
+        
+#         norm_s = Hyperboloid().minkowski_dot(h_s, h_s)
+#         valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
+#         valid_s = valid_s.float() / h_s.shape[-2] 
+        
+#         norm_t = Hyperboloid().minkowski_dot(h_t, h_t)
+#         valid_t = ((norm_t > -1.1) & (norm_t < -0.9)).sum()
+#         valid_t = valid_t.float() / h_t.shape[-2] 
+        
+#         print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
+#         print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}, {norm_t.mean().cpu().detach().numpy().round(2)}')
+        
+#         print(f'nans: {torch.isnan(h_s).sum().item()} nans')
+#         print('++++++++++++HYPERBOLOID CHECK IN HDGMC++++++++++++++')
+        
+        
+
+        h_s, s_mask = to_dense_batch(h_s, batch_s, fill_value=0)
+        h_t, t_mask = to_dense_batch(h_t, batch_t, fill_value=0)
+        
+        #print(f'================= nans: {torch.isnan(h_s).sum().item()}, {torch.isnan(h_t).sum().item()} =============')
+        
+        assert h_s.size(0) == h_t.size(0), 'Encountered unequal batch-sizes'
+        (B, N_s, C_out), N_t = h_s.size(), h_t.size(1)
+        R_in, R_out = self.psi_2.in_channels, self.psi_2.out_channels
+
+        if self.k < 1:
+            # ------ Dense variant ------ #
+            print(self.k)
+#             print('wow this is bullshit')
+            S_hat = h_s @ h_t.transpose(-1, -2) - 2 * torch.einsum('i,j->ij', (x_s[..., : , 0], x_t[..., : , 0]))  # [B, N_s, N_t, C_out]
+            S_mask = s_mask.view(B, N_s, 1) & t_mask.view(B, 1, N_t)
+            S_0 = masked_softmax(S_hat, S_mask, dim=-1)[s_mask]
+
+            for _ in range(self.num_steps):
+                S = masked_softmax(S_hat, S_mask, dim=-1)
+                r_s = torch.randn((B, N_s, R_in), dtype=h_s.dtype,
+                                  device=h_s.device)
+                r_t = S.transpose(-1, -2) @ r_s
+
+                r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
+                o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
+                o_t = self.psi_2(r_t, edge_index_t, edge_attr_t)
+                o_s, o_t = to_dense(o_s, s_mask), to_dense(o_t, t_mask)
+
+                D = o_s.view(B, N_s, 1, R_out) - o_t.view(B, 1, N_t, R_out)
+                S_hat = S_hat + self.mlp(D).squeeze(-1).masked_fill(~S_mask, 0)
+
+            S_L = masked_softmax(S_hat, S_mask, dim=-1)[s_mask]
+
+            return S_0, S_L
+        else:
+            # ------ Sparse variant ------ #
+            S_idx = self.__top_k__(h_s, h_t)  # [B, N_s, k]
+
+            # In addition to the top-k, randomly sample negative examples and
+            # ensure that the ground-truth is included as a sparse entry.
+            if self.training and y is not None:
+                rnd_size = (B, N_s, min(self.k, N_t - self.k))
+                S_rnd_idx = torch.randint(N_t, rnd_size, dtype=torch.long,
+                                          device=S_idx.device)
+                S_idx = torch.cat([S_idx, S_rnd_idx], dim=-1)
+                S_idx = self.__include_gt__(S_idx, s_mask, y)
+
+            k = S_idx.size(-1)
+            tmp_s = h_s.view(B, N_s, 1, C_out)
+            idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, C_out)
+            tmp_t = torch.gather(h_t.view(B, N_t, C_out), -2, idx)
+            S_hat = (tmp_s * tmp_t.view(B, N_s, k, C_out)).sum(dim=-1)
+            S_0 = S_hat.softmax(dim=-1)[s_mask]
+
+            for _ in range(self.num_steps):
+                S = S_hat.softmax(dim=-1)
+                r_s = torch.randn((B, N_s, R_in), dtype=h_s.dtype,
+                                  device=h_s.device)
+
+                tmp_t = r_s.view(B, N_s, 1, R_in) * S.view(B, N_s, k, 1)
+                tmp_t = tmp_t.view(B, N_s * k, R_in)
+                idx = S_idx.view(B, N_s * k, 1)
+                r_t = scatter_add(tmp_t, idx, dim=1, dim_size=N_t)
+
+                r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
+                o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
+                o_t = self.psi_2(r_t, edge_index_t, edge_attr_t)
+                o_s, o_t = to_dense(o_s, s_mask), to_dense(o_t, t_mask)
+
+                o_s = o_s.view(B, N_s, 1, R_out).expand(-1, -1, k, -1)
+                idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, R_out)
+                tmp_t = torch.gather(o_t.view(B, N_t, R_out), -2, idx)
+                D = o_s - tmp_t.view(B, N_s, k, R_out)
+                S_hat = S_hat + self.mlp(D).squeeze(-1)
+
+            S_L = S_hat.softmax(dim=-1)[s_mask]
+            S_idx = S_idx[s_mask]
+
+            # Convert sparse layout to `torch.sparse_coo_tensor`.
+            row = torch.arange(x_s.size(0), device=S_idx.device)
+            row = row.view(-1, 1).repeat(1, k)
+            idx = torch.stack([row.view(-1), S_idx.view(-1)], dim=0)
+            size = torch.Size([x_s.size(0), N_t])
+
+            S_sparse_0 = torch.sparse_coo_tensor(
+                idx, S_0.view(-1), size, requires_grad=S_0.requires_grad)
+            S_sparse_0.__idx__ = S_idx
+            S_sparse_0.__val__ = S_0
+
+            S_sparse_L = torch.sparse_coo_tensor(
+                idx, S_L.view(-1), size, requires_grad=S_L.requires_grad)
+            S_sparse_L.__idx__ = S_idx
+            S_sparse_L.__val__ = S_L
+            
+#             print(f'S 0: {torch.isnan(S_sparse_0).any().item()} nans')
+#             print(f'S L: {torch.isnan(S_sparse_L).any().item()} nans')
+#             S_L.register_hook(lambda grad: hook_fn(grad, msg='HDGMC FINAL'))
+
+            return S_sparse_0, S_sparse_L

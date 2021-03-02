@@ -6,8 +6,8 @@ import numpy as np
 from torch_geometric.datasets import DBP15K
 from matplotlib import pyplot as plt
 
-
-from hdgmc.hdgmc import RelCNN, HyperbolicRelCNN, HDGMC
+from manifolds.hyperboloid import Hyperboloid
+from hdgmc.hdgmc import RelCNN, HyperbolicRelCNN, HDGMC, HDGMC_ver1
 from models.encoders import MyHGCN
 
 parser = argparse.ArgumentParser()
@@ -38,14 +38,44 @@ psi_1 = HyperbolicRelCNN(100, 20, args.num_layers, batch_norm=False,
 
 # psi_1 = MyHGCN()
 # psi_1 = HyperbolicRelCNN(50, 50, 2)
-psi_2 = RelCNN(args.rnd_dim, args.rnd_dim, args.num_layers, batch_norm=False,
+psi_2 = HyperbolicRelCNN(args.rnd_dim, args.rnd_dim, args.num_layers, batch_norm=False,
                cat=True, lin=False, dropout=0.0)
 model = HDGMC(psi_1, psi_2, num_steps=None, k=args.k).to(device)
+# model = HDGMC_ver1(psi_1, psi_2, num_steps=None, k=args.k).to(device)
 
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
 
-data.x1 = data.x1[:, :100]
-data.x2 = data.x2[:, :100]
+data.x1 = data.x1[:, :100] / 5 
+data.x2 = data.x2[:, :100] / 5
+hyp = Hyperboloid()
+
+
+h_s = data.x1
+h_t = data.x2
+
+h_s = hyp.proj_tan0(h_s, c=1)
+h_s = hyp.expmap0(h_s, c=1)
+h_s = hyp.proj(h_s, c=1)
+
+h_t = hyp.proj_tan0(h_t, c=1)
+h_t = hyp.expmap0(h_t, c=1)
+h_t = hyp.proj(h_t, c=1)
+
+
+norm_s = hyp.minkowski_dot(h_s, h_s)
+valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
+valid_s = valid_s.float() / h_s.shape[-2] 
+
+norm_t = hyp.minkowski_dot(h_t, h_t)
+valid_t = ((norm_t > -1.1) & (norm_t < -0.9)).sum()
+valid_t = valid_t.float() / h_t.shape[-2] 
+
+# print('AT THE START')
+# print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
+# print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}, {norm_t.mean().cpu().detach().numpy().round(2)}')
+
+data.x1 = h_s
+data.x2 = h_t
 
 train_y = data.train_y
 test_y = data.test_y
@@ -94,6 +124,8 @@ for epoch in range(100):
         model.detach = True
 
     loss, hits1, hits10 = train()
+#     print((f'{epoch:03d}: Loss: {loss:.4f}, Hits@1: {hits1:.4f}, '
+#                f'Hits@10: {hits10:.4f}'))
     
     loss_history_train.append(loss)
     hits1_history_train.append(hits1)
@@ -135,4 +167,4 @@ plt.plot(hits10_history_test, label='test')
 plt.title('hits10')
 plt.xlabel('epoch')
 plt.legend()
-plt.savefig('progress_report/results_first_run.png')
+plt.savefig('progress_report/results_initial_ver3.png')

@@ -44,7 +44,7 @@ class HGCN(Encoder):
                             self.manifold, in_dim, out_dim, c_in, c_out, args.dropout, act, args.bias, args.local_agg
                     )
             )
-        self.layers = hgc_layers
+        self.layers = nn.ModuleList(hgc_layers)
         
 
     def encode(self, x, adj):
@@ -81,7 +81,7 @@ class MyHGCN(Encoder):
                             in_dim, out_dim, self.manifold, c 
                     )
             )
-        self.layers = hgc_layers
+        self.layers = nn.ModuleList(hgc_layers)
         
 
     def encode(self, x, adj):

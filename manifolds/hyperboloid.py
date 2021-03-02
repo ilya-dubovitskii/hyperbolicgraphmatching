@@ -134,6 +134,7 @@ class Hyperboloid():
         x = u.narrow(-1, 1, d).view(-1, d)
         x_norm = torch.norm(x, p=2, dim=1, keepdim=True)
         x_norm = torch.clamp(x_norm, min=self.min_norm)
+#         print(x_norm, sqrtK)
         theta = x_norm / sqrtK
         res = torch.ones_like(u)
         res[:, 0:1] = sqrtK * cosh(theta)

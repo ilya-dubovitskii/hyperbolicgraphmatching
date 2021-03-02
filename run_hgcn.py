@@ -8,6 +8,7 @@ import os
 import pickle
 import time
 
+import matplotlib.pyplot as plt
 import numpy as np
 import optimizers
 import torch
@@ -19,7 +20,7 @@ from torch.optim import Adam
 import manifolds
 
 hyp = manifolds.Hyperboloid()
-
+print(f'CUDA AVAILABLE: {torch.cuda.is_available()}')
 def train(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -27,7 +28,8 @@ def train(args):
         torch.set_default_dtype(torch.float64)
     if int(args.cuda) >= 0:
         torch.cuda.manual_seed(args.seed)
-    args.device = 'cuda:' + str(args.cuda) if int(args.cuda) >= 0 else 'cpu'
+#     args.device = 'cuda:' + str(args.cuda) if int(args.cuda) >= 0 else 'cpu'
+    args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     args.patience = args.epochs if not args.patience else  int(args.patience)
     logging.getLogger().setLevel(logging.INFO)
     if args.save:
@@ -46,15 +48,20 @@ def train(args):
 
     logging.info(f'Using: {args.device}')
     logging.info("Using seed {}.".format(args.seed))
-
+    
+    train_loss_history = []
+    val_loss_history = []
+    train_acc_history = []
+    val_acc_history = []
+    
     # Load data
     if args.model == 'MyHGCN':
         pyg_stuff = True
     else:
         pyg_stuff = False
     
-    print(f'pyg stuff: {pyg_stuff}')
     data = load_data(args, os.path.join(os.environ['DATAPATH'], args.dataset), pyg_stuff)
+    print(f'TRAIN SIZE: {len(data["idx_train"])}, VAL SIZE: {len(data["idx_val"])} TEST SIZE: {len(data["idx_test"])}')
     args.n_nodes, args.feat_dim = data['features'].shape
     if args.task == 'nc':
         Model = NCModel
@@ -77,6 +84,7 @@ def train(args):
     tot_params = sum([np.prod(p.size()) for p in model.parameters()])
     logging.info(f"Total number of parameters: {tot_params}")
     if args.cuda is not None and int(args.cuda) >= 0 :
+        print(f'DEVICE IS: {args.device}')
         os.environ['CUDA_VISIBLE_DEVICES'] = str(args.cuda)
         model = model.to(args.device)
         for x, val in data.items():
@@ -98,9 +106,12 @@ def train(args):
     valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
     valid_s = valid_s.float() / h_s.shape[-2] 
 
-    print('AT THE START')
-    print(f'on hyperboloid: {valid_s:.02f}')
-    print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}')
+#     print('AT THE START')
+#     print(f'on hyperboloid: {valid_s:.02f}')
+#     print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}')
+#     p = next(model.encoder.layers[0].parameters())
+#     print(f'MODEL DEVICE IS: {p.is_cuda}')
+    
     
     for epoch in range(args.epochs):
         t = time.time()
@@ -115,25 +126,28 @@ def train(args):
         valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
         valid_s = valid_s.float() / h_s.shape[-2] 
 
-        print(f'EPOCH {epoch} ================')
-        print(f'on hyperboloid: {valid_s:.02f}')
-        print(f'norms: {norm_s.mean().cpu().detach().numpy()}')
-        print('========================')
+#         print(f'EPOCH {epoch} ================')
+#         print(f'on hyperboloid: {valid_s:.02f}')
+#         print(f'norms: {norm_s.mean().cpu().detach().numpy()}')
+#         print('========================')
         
         train_metrics = model.compute_metrics(embeddings, data, 'train')
         train_metrics['loss'].backward()
+        
+        train_loss_history.append(train_metrics['loss'].item())
+        train_acc_history.append(train_metrics['acc'].item())
         if args.grad_clip is not None:
             max_norm = float(args.grad_clip)
             all_params = list(model.parameters())
             for param in all_params:
                 torch.nn.utils.clip_grad_norm_(param, max_norm)
                 
-        if pyg_stuff == True:
-            print(f'GRAD NORM IS: {model.encoder.layers[0].weight.grad.norm()}')
-        else:
-            print(f'GRAD NORM IS: {model.encoder.layers[0].linear.weight.grad.norm()}')
+#         if pyg_stuff == True:
+#             print(f'GRAD NORM IS: {model.encoder.layers[0].weight.grad.norm()}')
+#         else:
+#             print(f'GRAD NORM IS: {model.encoder.layers[0].linear.weight.grad.norm()}')
         
-        print(f'DECODER GRAD NORM IS: {model.decoder.cls.linear.weight.grad.norm()}')
+#         print(f'DECODER GRAD NORM IS: {model.decoder.cls.linear.weight.grad.norm()}')
         
         optimizer.step()
         
@@ -144,10 +158,13 @@ def train(args):
                                    format_metrics(train_metrics, 'train'),
                                    'time: {:.4f}s'.format(time.time() - t)
                                    ]))
-        if (epoch + 1) % args.eval_freq == 0:
+#         if (epoch + 1) % args.eval_freq == 0:
+        if True:
             model.eval()
             embeddings = model.encode(data['features'], data['adj_train_norm'])
             val_metrics = model.compute_metrics(embeddings, data, 'val')
+            val_loss_history.append(val_metrics['loss'].item())
+            val_acc_history.append(val_metrics['acc'].item())
             if (epoch + 1) % args.log_freq == 0:
                 logging.info(" ".join(['Epoch: {:04d}'.format(epoch + 1), format_metrics(val_metrics, 'val')]))
             if model.has_improved(best_val_metrics, val_metrics):
@@ -181,6 +198,25 @@ def train(args):
         json.dump(vars(args), open(os.path.join(save_dir, 'config.json'), 'w'))
         torch.save(model.state_dict(), os.path.join(save_dir, 'model.pth'))
         logging.info(f"Saved model in {save_dir}")
+        
+    plt.figure(figsize=(20,10))
+    plt.subplot(1, 2, 1)
+    plt.plot(train_loss_history, label='train')
+    plt.plot(val_loss_history, label='val')
+    plt.title('loss')
+    plt.xlabel('epoch')
+    plt.legend()
+
+
+
+    plt.subplot(1, 2, 2)
+    plt.plot(train_acc_history, label='train')
+    plt.plot(val_acc_history, label='val')
+    plt.title('acc')
+    plt.xlabel('epoch')
+    plt.legend()
+
+    plt.savefig(f'progress_report/strange_hgcn_dynamics{args.model}.png')
 
 if __name__ == '__main__':
     args = parser.parse_args()

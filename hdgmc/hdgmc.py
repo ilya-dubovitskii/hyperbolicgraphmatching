@@ -16,13 +16,20 @@ from layers.rel import RelConv
 
 import math
 
+
+
 try:
     from pykeops.torch import LazyTensor
 except ImportError:
     LazyTensor = None
 
     
-
+def hook_fn(grad, msg=None):
+    print(f'\n------------{msg}------------')
+    print(f'the norm is: {grad.norm()}')
+    print(f'++++++++++++{msg}++++++++++++\n')
+    
+    return grad
 
 class RelCNN(torch.nn.Module):
     def __init__(self, in_channels, out_channels, num_layers, batch_norm=False,
@@ -100,7 +107,7 @@ class HyperbolicRelCNN(torch.nn.Module):
 
         self.convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()
-        for _ in range(num_layers):
+        for _ in range(1):
             self.convs.append(MyHyperbolicGraphConvolution(in_channels, out_channels, Hyperboloid(), 1))
             self.batch_norms.append(nn.Identity())
             in_channels = out_channels
@@ -282,25 +289,22 @@ class HDGMC(torch.nn.Module):
 
         h_s, h_t = (h_s.detach(), h_t.detach()) if self.detach else (h_s, h_t)
         
-#         print('-------------------------')
-#         print(f'{(h_s == 0).sum()} zeros out of {h_s.numel()} elements, {(h_s == 0).sum().float() / h_s.numel():.02f}')
-#         print(f'{(h_t == 0).sum()} zeros out of {h_t.numel()} elements, {(h_t == 0).sum().float() / h_t.numel():.02f}')
-#         print(f'shapes: {h_s.shape}, {h_t.shape}')
+        print('-----------HYPERBOLOID CHECK IN HDGMC--------------')
        
         
-#         norm_s = Hyperboloid().minkowski_dot(h_s, h_s)
-#         valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
-#         valid_s = valid_s.float() / h_s.shape[-2] 
+        norm_s = Hyperboloid().minkowski_dot(h_s, h_s)
+        valid_s = ((norm_s > -1.1) & (norm_s < -0.9)).sum()
+        valid_s = valid_s.float() / h_s.shape[-2] 
         
-#         norm_t = Hyperboloid().minkowski_dot(h_t, h_t)
-#         valid_t = ((norm_t > -1.1) & (norm_t < -0.9)).sum()
-#         valid_t = valid_t.float() / h_t.shape[-2] 
+        norm_t = Hyperboloid().minkowski_dot(h_t, h_t)
+        valid_t = ((norm_t > -1.1) & (norm_t < -0.9)).sum()
+        valid_t = valid_t.float() / h_t.shape[-2] 
         
-#         print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
-#         print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}, {norm_t.mean().cpu().detach().numpy().round(2)}')
+        print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
+        print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}, {norm_t.mean().cpu().detach().numpy().round(2)}')
         
-#         print(f'nans: {torch.isnan(h_s).sum().item()} nans')
-#         print('++++++++++++++++++++++++++')
+        print(f'nans: {torch.isnan(h_s).sum().item()} nans')
+        print('++++++++++++HYPERBOLOID CHECK IN HDGMC++++++++++++++')
         
         
 
@@ -399,6 +403,7 @@ class HDGMC(torch.nn.Module):
             
 #             print(f'S 0: {torch.isnan(S_sparse_0).any().item()} nans')
 #             print(f'S L: {torch.isnan(S_sparse_L).any().item()} nans')
+            S_L.register_hook(lambda grad: hook_fn(grad, msg='HDGMC FINAL'))
 
             return S_sparse_0, S_sparse_L
 
@@ -423,7 +428,7 @@ class HDGMC(torch.nn.Module):
             mask = S.__idx__[y[0]] == y[1].view(-1, 1)
             val = S.__val__[[y[0]]][mask]
             
-#         print(f'S: {S}')
+#         print(f'mask: {mask}')
 #         print(f'mask: {mask.sum()}')
 #         print(f'value: {val}')
         nll = -torch.log(val + EPS)

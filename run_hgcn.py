@@ -17,10 +17,15 @@ from models.base_models import NCModel
 from utils.data_utils import load_data
 from utils.train_utils import get_dir_name, format_metrics
 from torch.optim import Adam
-import manifolds
+from manifolds.hyperboloid import Hyperboloid
 
+<<<<<<< HEAD
 hyp = manifolds.Hyperboloid()
 print(f'CUDA AVAILABLE: {torch.cuda.is_available()}')
+=======
+hyp = Hyperboloid()
+
+>>>>>>> bd3bea0c33a2e043e15911c258781e7cc3fd35f7
 def train(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -114,6 +119,7 @@ def train(args):
     
     
     for epoch in range(args.epochs):
+        print('WWWWWWWWWWWWWWWWWW')
         t = time.time()
         model.train()
         optimizer.zero_grad()
@@ -141,6 +147,7 @@ def train(args):
             all_params = list(model.parameters())
             for param in all_params:
                 torch.nn.utils.clip_grad_norm_(param, max_norm)
+<<<<<<< HEAD
                 
 #         if pyg_stuff == True:
 #             print(f'GRAD NORM IS: {model.encoder.layers[0].weight.grad.norm()}')
@@ -149,6 +156,9 @@ def train(args):
         
 #         print(f'DECODER GRAD NORM IS: {model.decoder.cls.linear.weight.grad.norm()}')
         
+=======
+
+>>>>>>> bd3bea0c33a2e043e15911c258781e7cc3fd35f7
         optimizer.step()
         
         lr_scheduler.step()

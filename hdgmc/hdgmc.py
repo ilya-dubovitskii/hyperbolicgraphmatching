@@ -94,22 +94,22 @@ class RelCNN(torch.nn.Module):
     
     
 class HyperbolicRelCNN(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, num_layers, batch_norm=False,
-                 cat=True, lin=True, dropout=0.0):
+    def __init__(self, manifold, in_channels, out_channels, c, num_layers,
+                 cat=True, lin=True, dropout=0.0, use_bias=True):
         super(HyperbolicRelCNN, self).__init__()
 
         self.in_channels = in_channels
         self.num_layers = num_layers
-        self.batch_norm = batch_norm
         self.cat = cat
         self.lin = lin
         self.dropout = dropout
+        self.manifold = manifold
+        self.c = c
 
         self.convs = torch.nn.ModuleList()
-        self.batch_norms = torch.nn.ModuleList()
-        for _ in range(1):
-            self.convs.append(MyHyperbolicGraphConvolution(in_channels, out_channels, Hyperboloid(), 1))
-            self.batch_norms.append(nn.Identity())
+
+        for _ in range(self.num_layers):
+            self.convs.append(MyHyperbolicGraphConvolution(manifold, in_channels, out_channels, c, dropout, use_bias))
             in_channels = out_channels
 
         if self.cat:
@@ -119,16 +119,15 @@ class HyperbolicRelCNN(torch.nn.Module):
 
         if self.lin:
             self.out_channels = out_channels
-            self.final = HypLinear(Hyperboloid(), in_channels, out_channels, 1, False, False)
+            self.final = HypLinear(manifold, in_channels, out_channels, c, dropout, use_bias)
         else:
             self.out_channels = in_channels
 
         self.reset_parameters()
 
     def reset_parameters(self):
-        for conv, batch_norm in zip(self.convs, self.batch_norms):
+        for conv in self.convs:
             conv.reset_parameters()
-#             batch_norm.reset_parameters()
         if self.lin:
             self.final.reset_parameters()
 
@@ -136,7 +135,7 @@ class HyperbolicRelCNN(torch.nn.Module):
         """"""
         xs = [x]
 
-        for conv, batch_norm in zip(self.convs, self.batch_norms):
+        for conv in self.convs:
             x = conv(xs[-1], edge_index)
             x = F.dropout(x, p=self.dropout, training=self.training)
             xs.append(x)
@@ -146,10 +145,10 @@ class HyperbolicRelCNN(torch.nn.Module):
         return x
 
     def __repr__(self):
-        return ('{}({}, {}, num_layers={}, batch_norm={}, cat={}, lin={}, '
+        return ('{}({}, {}, num_layers={}, cat={}, lin={}, '
                 'dropout={})').format(self.__class__.__name__,
                                       self.in_channels, self.out_channels,
-                                      self.num_layers, self.batch_norm,
+                                      self.num_layers,
                                       self.cat, self.lin, self.dropout)
 
 
@@ -214,7 +213,8 @@ class HDGMC(torch.nn.Module):
         self.k = k
         self.detach = detach
         self.backend = 'auto'
-        self.hyp = Hyperboloid()
+        self.manifold = psi_1.manifold
+        self.c = psi_1.c
         self.mlp = Seq(
             Lin(psi_2.out_channels, psi_2.out_channels),
             ReLU(),
@@ -317,107 +317,82 @@ class HDGMC(torch.nn.Module):
         (B, N_s, C_out), N_t = h_s.size(), h_t.size(1)
         R_in, R_out = self.psi_2.in_channels, self.psi_2.out_channels
 
-        if self.k < 1:
-            # ------ Dense variant ------ #
-            print(self.k)
-#             print('wow this is bullshit')
-            S_hat = h_s @ h_t.transpose(-1, -2) - 2 * torch.einsum('i,j->ij', (x_s[..., : , 0], x_t[..., : , 0]))  # [B, N_s, N_t, C_out]
-            S_mask = s_mask.view(B, N_s, 1) & t_mask.view(B, 1, N_t)
-            S_0 = masked_softmax(S_hat, S_mask, dim=-1)[s_mask]
+    
+        # ------ Sparse variant ------ #
+        S_idx = self.__top_k__(h_s, h_t)  # [B, N_s, k]
 
-            for _ in range(self.num_steps):
-                S = masked_softmax(S_hat, S_mask, dim=-1)
-                r_s = torch.randn((B, N_s, R_in), dtype=h_s.dtype,
-                                  device=h_s.device)
-                r_t = S.transpose(-1, -2) @ r_s
+        # In addition to the top-k, randomly sample negative examples and
+        # ensure that the ground-truth is included as a sparse entry.
+        if self.training and y is not None:
+            rnd_size = (B, N_s, min(self.k, N_t - self.k))
+            S_rnd_idx = torch.randint(N_t, rnd_size, dtype=torch.long,
+                                      device=S_idx.device)
+            S_idx = torch.cat([S_idx, S_rnd_idx], dim=-1)
+            S_idx = self.__include_gt__(S_idx, s_mask, y)
 
-                r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
-                o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
-                o_t = self.psi_2(r_t, edge_index_t, edge_attr_t)
-                o_s, o_t = to_dense(o_s, s_mask), to_dense(o_t, t_mask)
-
-                D = o_s.view(B, N_s, 1, R_out) - o_t.view(B, 1, N_t, R_out)
-                S_hat = S_hat + self.mlp(D).squeeze(-1).masked_fill(~S_mask, 0)
-
-            S_L = masked_softmax(S_hat, S_mask, dim=-1)[s_mask]
-
-            return S_0, S_L
-        else:
-            # ------ Sparse variant ------ #
-            S_idx = self.__top_k__(h_s, h_t)  # [B, N_s, k]
-
-            # In addition to the top-k, randomly sample negative examples and
-            # ensure that the ground-truth is included as a sparse entry.
-            if self.training and y is not None:
-                rnd_size = (B, N_s, min(self.k, N_t - self.k))
-                S_rnd_idx = torch.randint(N_t, rnd_size, dtype=torch.long,
-                                          device=S_idx.device)
-                S_idx = torch.cat([S_idx, S_rnd_idx], dim=-1)
-                S_idx = self.__include_gt__(S_idx, s_mask, y)
-
-            k = S_idx.size(-1)
-            tmp_s = h_s.view(B, N_s, 1, C_out)
-            idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, C_out)
-            tmp_t = torch.gather(h_t.view(B, N_t, C_out), -2, idx)
-            S_hat = (tmp_s * tmp_t.view(B, N_s, k, C_out)).sum(dim=-1) - 2 * (tmp_s[..., 0] * tmp_t.view(B, N_s, k, C_out)[..., 0])
+        k = S_idx.size(-1)
+        tmp_s = h_s.view(B, N_s, 1, C_out)
+        idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, C_out)
+        tmp_t = torch.gather(h_t.view(B, N_t, C_out), -2, idx)
+        S_hat = (tmp_s * tmp_t.view(B, N_s, k, C_out)).sum(dim=-1) - 2 * (tmp_s[..., 0] * tmp_t.view(B, N_s, k, C_out)[..., 0])
 #             print('....................')
 #             print((tmp_s * tmp_t.view(B, N_s, k, C_out)).sum(dim=-1).shape, (tmp_s[..., 0] * tmp_t.view(B, N_s, k, C_out)[..., 0]).shape)
 #             print('.........................')
-            S_0 = S_hat.softmax(dim=-1)[s_mask]
+        S_0 = S_hat.softmax(dim=-1)[s_mask]
 
-            for _ in range(self.num_steps):
-                S = S_hat.softmax(dim=-1)
-                r_s = torch.randn((B, N_s, R_in), dtype=h_s.dtype,
-                                  device=h_s.device)
+        for _ in range(self.num_steps):
+            S = S_hat.softmax(dim=-1)
+            r_s = torch.randn((B, N_s, R_in), dtype=h_s.dtype,
+                              device=h_s.device)
 
-                tmp_t = r_s.view(B, N_s, 1, R_in) * S.view(B, N_s, k, 1)
-                tmp_t = tmp_t.view(B, N_s * k, R_in)
-                idx = S_idx.view(B, N_s * k, 1)
-                r_t = scatter_add(tmp_t, idx, dim=1, dim_size=N_t)
-                
-#                 r_s = self.hyp.proj_tan0(r_s, c=1)
-                r_s = self.hyp.expmap0(r_s, c=1)
-                r_s = self.hyp.proj(r_s, c=1)
+            tmp_t = r_s.view(B, N_s, 1, R_in) * S.view(B, N_s, k, 1)
+            tmp_t = tmp_t.view(B, N_s * k, R_in)
+            idx = S_idx.view(B, N_s * k, 1)
+            r_t = scatter_add(tmp_t, idx, dim=1, dim_size=N_t)
 
-#                 r_t = self.hyp.proj_tan0(r_t, c=1)
-                r_t = self.hyp.expmap0(r_t, c=1)
-                r_t = self.hyp.proj(r_t, c=1)
-                
-                r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
-                o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
-                o_t = self.psi_2(r_t, edge_index_t, edge_attr_t)
-                o_s, o_t = to_dense(o_s, s_mask), to_dense(o_t, t_mask)
+#                 r_s = self.manifold.proj_tan0(r_s, c=self.c)
+            r_s = self.manifold.expmap0(r_s, c=self.c)
+            r_s = self.manifold.proj(r_s, c=self.c)
 
-                o_s = o_s.view(B, N_s, 1, R_out).expand(-1, -1, k, -1)
-                idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, R_out)
-                tmp_t = torch.gather(o_t.view(B, N_t, R_out), -2, idx)
-                D = o_s - tmp_t.view(B, N_s, k, R_out)
-                S_hat = S_hat + self.mlp(D).squeeze(-1)
+#                 r_t = self.manifold.proj_tan0(r_t, c=self.c)
+            r_t = self.manifold.expmap0(r_t, c=self.c)
+            r_t = self.manifold.proj(r_t, c=self.c)
 
-            S_L = S_hat.softmax(dim=-1)[s_mask]
-            S_idx = S_idx[s_mask]
+            r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
+            o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
+            o_t = self.psi_2(r_t, edge_index_t, edge_attr_t)
+            o_s, o_t = to_dense(o_s, s_mask), to_dense(o_t, t_mask)
 
-            # Convert sparse layout to `torch.sparse_coo_tensor`.
-            row = torch.arange(x_s.size(0), device=S_idx.device)
-            row = row.view(-1, 1).repeat(1, k)
-            idx = torch.stack([row.view(-1), S_idx.view(-1)], dim=0)
-            size = torch.Size([x_s.size(0), N_t])
+            o_s = o_s.view(B, N_s, 1, R_out).expand(-1, -1, k, -1)
+            idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, R_out)
+            tmp_t = torch.gather(o_t.view(B, N_t, R_out), -2, idx)
+            D = o_s - tmp_t.view(B, N_s, k, R_out)
+            S_hat = S_hat + self.mlp(D).squeeze(-1)
 
-            S_sparse_0 = torch.sparse_coo_tensor(
-                idx, S_0.view(-1), size, requires_grad=S_0.requires_grad)
-            S_sparse_0.__idx__ = S_idx
-            S_sparse_0.__val__ = S_0
+        S_L = S_hat.softmax(dim=-1)[s_mask]
+        S_idx = S_idx[s_mask]
 
-            S_sparse_L = torch.sparse_coo_tensor(
-                idx, S_L.view(-1), size, requires_grad=S_L.requires_grad)
-            S_sparse_L.__idx__ = S_idx
-            S_sparse_L.__val__ = S_L
-            
+        # Convert sparse layout to `torch.sparse_coo_tensor`.
+        row = torch.arange(x_s.size(0), device=S_idx.device)
+        row = row.view(-1, 1).repeat(1, k)
+        idx = torch.stack([row.view(-1), S_idx.view(-1)], dim=0)
+        size = torch.Size([x_s.size(0), N_t])
+
+        S_sparse_0 = torch.sparse_coo_tensor(
+            idx, S_0.view(-1), size, requires_grad=S_0.requires_grad)
+        S_sparse_0.__idx__ = S_idx
+        S_sparse_0.__val__ = S_0
+
+        S_sparse_L = torch.sparse_coo_tensor(
+            idx, S_L.view(-1), size, requires_grad=S_L.requires_grad)
+        S_sparse_L.__idx__ = S_idx
+        S_sparse_L.__val__ = S_L
+
 #             print(f'S 0: {torch.isnan(S_sparse_0).any().item()} nans')
 #             print(f'S L: {torch.isnan(S_sparse_L).any().item()} nans')
 #             S_L.register_hook(lambda grad: hook_fn(grad, msg='HDGMC FINAL'))
 
-            return S_sparse_0, S_sparse_L
+        return S_sparse_0, S_sparse_L
 
     def loss(self, S, y, reduction='mean'):
         r"""Computes the negative log-likelihood loss on the correspondence
@@ -503,12 +478,13 @@ class HDGMC(torch.nn.Module):
 
 class HDGMC_ver1(HDGMC):
     def __init__(self, psi_1, psi_2, num_steps, k=-1, detach=False):
-        super().__init__(psi_1, psi_2, num_steps, k=k, detach=False)
-        self.hyp = Hyperboloid()
+        super().__init__(psi_1, psi_2, num_steps, k=k, detach)
+        self.manifold = psi_1.manifold
+        self.c = psi_1.c
         
     def __top__k(self, x_s, x_t):
-        x_s = self.hyp.proj_tan0(self.hyp.logmap0(x_s, c=1), c=1)
-        x_t = self.hyp.proj_tan0(self.hyp.logmap0(x_t, c=1), c=1)
+        x_s = self.manifold.proj_tan0(self.manifold.logmap0(x_s, c=self.c), c=self.c)
+        x_t = self.manifold.proj_tan0(self.manifold.logmap0(x_t, c=self.c), c=self.c)
         
         S_ij = (x_s @ x_t.transpose(-1, -2))
         
@@ -552,8 +528,8 @@ class HDGMC_ver1(HDGMC):
         h_s = self.psi_1(x_s, edge_index_s, edge_attr_s)
         h_t = self.psi_1(x_t, edge_index_t, edge_attr_t)
         
-        h_s = self.hyp.proj_tan0(self.hyp.logmap0(h_s, c=1), c=1)
-        h_t = self.hyp.proj_tan0(self.hyp.logmap0(h_t, c=1), c=1)
+        h_s = self.manifold.proj_tan0(self.manifold.logmap0(h_s, c=self.c), c=self.c)
+        h_t = self.manifold.proj_tan0(self.manifold.logmap0(h_t, c=self.c), c=self.c)
         
         h_s, h_t = (h_s.detach(), h_t.detach()) if self.detach else (h_s, h_t)
         
@@ -585,93 +561,67 @@ class HDGMC_ver1(HDGMC):
         (B, N_s, C_out), N_t = h_s.size(), h_t.size(1)
         R_in, R_out = self.psi_2.in_channels, self.psi_2.out_channels
 
-        if self.k < 1:
-            # ------ Dense variant ------ #
-            print(self.k)
-#             print('wow this is bullshit')
-            S_hat = h_s @ h_t.transpose(-1, -2) - 2 * torch.einsum('i,j->ij', (x_s[..., : , 0], x_t[..., : , 0]))  # [B, N_s, N_t, C_out]
-            S_mask = s_mask.view(B, N_s, 1) & t_mask.view(B, 1, N_t)
-            S_0 = masked_softmax(S_hat, S_mask, dim=-1)[s_mask]
+        # ------ Sparse variant ------ #
+        S_idx = self.__top_k__(h_s, h_t)  # [B, N_s, k]
 
-            for _ in range(self.num_steps):
-                S = masked_softmax(S_hat, S_mask, dim=-1)
-                r_s = torch.randn((B, N_s, R_in), dtype=h_s.dtype,
-                                  device=h_s.device)
-                r_t = S.transpose(-1, -2) @ r_s
+        # In addition to the top-k, randomly sample negative examples and
+        # ensure that the ground-truth is included as a sparse entry.
+        if self.training and y is not None:
+            rnd_size = (B, N_s, min(self.k, N_t - self.k))
+            S_rnd_idx = torch.randint(N_t, rnd_size, dtype=torch.long,
+                                      device=S_idx.device)
+            S_idx = torch.cat([S_idx, S_rnd_idx], dim=-1)
+            S_idx = self.__include_gt__(S_idx, s_mask, y)
 
-                r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
-                o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
-                o_t = self.psi_2(r_t, edge_index_t, edge_attr_t)
-                o_s, o_t = to_dense(o_s, s_mask), to_dense(o_t, t_mask)
+        k = S_idx.size(-1)
+        tmp_s = h_s.view(B, N_s, 1, C_out)
+        idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, C_out)
+        tmp_t = torch.gather(h_t.view(B, N_t, C_out), -2, idx)
+        S_hat = (tmp_s * tmp_t.view(B, N_s, k, C_out)).sum(dim=-1)
+        S_0 = S_hat.softmax(dim=-1)[s_mask]
 
-                D = o_s.view(B, N_s, 1, R_out) - o_t.view(B, 1, N_t, R_out)
-                S_hat = S_hat + self.mlp(D).squeeze(-1).masked_fill(~S_mask, 0)
+        for _ in range(self.num_steps):
+            S = S_hat.softmax(dim=-1)
+            r_s = torch.randn((B, N_s, R_in), dtype=h_s.dtype,
+                              device=h_s.device)
 
-            S_L = masked_softmax(S_hat, S_mask, dim=-1)[s_mask]
+            tmp_t = r_s.view(B, N_s, 1, R_in) * S.view(B, N_s, k, 1)
+            tmp_t = tmp_t.view(B, N_s * k, R_in)
+            idx = S_idx.view(B, N_s * k, 1)
+            r_t = scatter_add(tmp_t, idx, dim=1, dim_size=N_t)
 
-            return S_0, S_L
-        else:
-            # ------ Sparse variant ------ #
-            S_idx = self.__top_k__(h_s, h_t)  # [B, N_s, k]
+            r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
+            o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
+            o_t = self.psi_2(r_t, edge_index_t, edge_attr_t)
+            o_s, o_t = to_dense(o_s, s_mask), to_dense(o_t, t_mask)
 
-            # In addition to the top-k, randomly sample negative examples and
-            # ensure that the ground-truth is included as a sparse entry.
-            if self.training and y is not None:
-                rnd_size = (B, N_s, min(self.k, N_t - self.k))
-                S_rnd_idx = torch.randint(N_t, rnd_size, dtype=torch.long,
-                                          device=S_idx.device)
-                S_idx = torch.cat([S_idx, S_rnd_idx], dim=-1)
-                S_idx = self.__include_gt__(S_idx, s_mask, y)
+            o_s = o_s.view(B, N_s, 1, R_out).expand(-1, -1, k, -1)
+            idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, R_out)
+            tmp_t = torch.gather(o_t.view(B, N_t, R_out), -2, idx)
+            D = o_s - tmp_t.view(B, N_s, k, R_out)
+            S_hat = S_hat + self.mlp(D).squeeze(-1)
 
-            k = S_idx.size(-1)
-            tmp_s = h_s.view(B, N_s, 1, C_out)
-            idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, C_out)
-            tmp_t = torch.gather(h_t.view(B, N_t, C_out), -2, idx)
-            S_hat = (tmp_s * tmp_t.view(B, N_s, k, C_out)).sum(dim=-1)
-            S_0 = S_hat.softmax(dim=-1)[s_mask]
+        S_L = S_hat.softmax(dim=-1)[s_mask]
+        S_idx = S_idx[s_mask]
 
-            for _ in range(self.num_steps):
-                S = S_hat.softmax(dim=-1)
-                r_s = torch.randn((B, N_s, R_in), dtype=h_s.dtype,
-                                  device=h_s.device)
+        # Convert sparse layout to `torch.sparse_coo_tensor`.
+        row = torch.arange(x_s.size(0), device=S_idx.device)
+        row = row.view(-1, 1).repeat(1, k)
+        idx = torch.stack([row.view(-1), S_idx.view(-1)], dim=0)
+        size = torch.Size([x_s.size(0), N_t])
 
-                tmp_t = r_s.view(B, N_s, 1, R_in) * S.view(B, N_s, k, 1)
-                tmp_t = tmp_t.view(B, N_s * k, R_in)
-                idx = S_idx.view(B, N_s * k, 1)
-                r_t = scatter_add(tmp_t, idx, dim=1, dim_size=N_t)
+        S_sparse_0 = torch.sparse_coo_tensor(
+            idx, S_0.view(-1), size, requires_grad=S_0.requires_grad)
+        S_sparse_0.__idx__ = S_idx
+        S_sparse_0.__val__ = S_0
 
-                r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
-                o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
-                o_t = self.psi_2(r_t, edge_index_t, edge_attr_t)
-                o_s, o_t = to_dense(o_s, s_mask), to_dense(o_t, t_mask)
+        S_sparse_L = torch.sparse_coo_tensor(
+            idx, S_L.view(-1), size, requires_grad=S_L.requires_grad)
+        S_sparse_L.__idx__ = S_idx
+        S_sparse_L.__val__ = S_L
 
-                o_s = o_s.view(B, N_s, 1, R_out).expand(-1, -1, k, -1)
-                idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, R_out)
-                tmp_t = torch.gather(o_t.view(B, N_t, R_out), -2, idx)
-                D = o_s - tmp_t.view(B, N_s, k, R_out)
-                S_hat = S_hat + self.mlp(D).squeeze(-1)
-
-            S_L = S_hat.softmax(dim=-1)[s_mask]
-            S_idx = S_idx[s_mask]
-
-            # Convert sparse layout to `torch.sparse_coo_tensor`.
-            row = torch.arange(x_s.size(0), device=S_idx.device)
-            row = row.view(-1, 1).repeat(1, k)
-            idx = torch.stack([row.view(-1), S_idx.view(-1)], dim=0)
-            size = torch.Size([x_s.size(0), N_t])
-
-            S_sparse_0 = torch.sparse_coo_tensor(
-                idx, S_0.view(-1), size, requires_grad=S_0.requires_grad)
-            S_sparse_0.__idx__ = S_idx
-            S_sparse_0.__val__ = S_0
-
-            S_sparse_L = torch.sparse_coo_tensor(
-                idx, S_L.view(-1), size, requires_grad=S_L.requires_grad)
-            S_sparse_L.__idx__ = S_idx
-            S_sparse_L.__val__ = S_L
-            
 #             print(f'S 0: {torch.isnan(S_sparse_0).any().item()} nans')
 #             print(f'S L: {torch.isnan(S_sparse_L).any().item()} nans')
 #             S_L.register_hook(lambda grad: hook_fn(grad, msg='HDGMC FINAL'))
 
-            return S_sparse_0, S_sparse_L
+        return S_sparse_0, S_sparse_L

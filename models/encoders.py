@@ -66,7 +66,6 @@ class MyHGCN(Encoder):
 
     def __init__(self, c, args):
         super(MyHGCN, self).__init__(c)
-        print('what')
         self.manifold = getattr(manifolds, args.manifold)()
        
         assert args.num_layers > 1

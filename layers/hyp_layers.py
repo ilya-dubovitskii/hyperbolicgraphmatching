@@ -174,7 +174,7 @@ class HypAct(Module):
 
 
 class MyHyperbolicGraphConvolution(MessagePassing):
-    def __init__(self, in_channels, out_channels, manifold, c, verbose=False):
+    def __init__(self, manifold, in_channels, out_channels, c, verbose=False):
         super().__init__(aggr='add')
 #         print('what')
         self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
@@ -185,7 +185,6 @@ class MyHyperbolicGraphConvolution(MessagePassing):
         self.reset_parameters()
         
     def reset_parameters(self):
-        torch.manual_seed(123)
         init.xavier_uniform_(self.weight, gain=1)
        
         print(f'shape: {self.weight.shape}, norm: {np.linalg.norm(self.weight.detach().cpu().numpy(), ord=2)}')

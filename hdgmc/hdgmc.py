@@ -303,7 +303,6 @@ class HDGMC(torch.nn.Module):
 #         print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
 #         print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}, {norm_t.mean().cpu().detach().numpy().round(2)}')
         
-#         print(f'nans: {torch.isnan(h_s).sum().item()} nans')
 #         print('++++++++++++HYPERBOLOID CHECK IN HDGMC++++++++++++++')
         
         
@@ -350,13 +349,13 @@ class HDGMC(torch.nn.Module):
             idx = S_idx.view(B, N_s * k, 1)
             r_t = scatter_add(tmp_t, idx, dim=1, dim_size=N_t)
 
-#                 r_s = self.manifold.proj_tan0(r_s, c=self.c)
-            r_s = self.manifold.expmap0(r_s, c=self.c)
-            r_s = self.manifold.proj(r_s, c=self.c)
+# #                 r_s = self.manifold.proj_tan0(r_s, c=self.c)
+#             r_s = self.manifold.expmap0(r_s, c=self.c)
+#             r_s = self.manifold.proj(r_s, c=self.c)
 
-#                 r_t = self.manifold.proj_tan0(r_t, c=self.c)
-            r_t = self.manifold.expmap0(r_t, c=self.c)
-            r_t = self.manifold.proj(r_t, c=self.c)
+# #                 r_t = self.manifold.proj_tan0(r_t, c=self.c)
+#             r_t = self.manifold.expmap0(r_t, c=self.c)
+#             r_t = self.manifold.proj(r_t, c=self.c)
 
             r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
             o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
@@ -478,7 +477,7 @@ class HDGMC(torch.nn.Module):
 
 class HDGMC_ver1(HDGMC):
     def __init__(self, psi_1, psi_2, num_steps, k=-1, detach=False):
-        super().__init__(psi_1, psi_2, num_steps, k=k, detach)
+        super().__init__(psi_1, psi_2, num_steps, k=k, detach=detach)
         self.manifold = psi_1.manifold
         self.c = psi_1.c
         
@@ -589,7 +588,15 @@ class HDGMC_ver1(HDGMC):
             tmp_t = tmp_t.view(B, N_s * k, R_in)
             idx = S_idx.view(B, N_s * k, 1)
             r_t = scatter_add(tmp_t, idx, dim=1, dim_size=N_t)
+            
+            #                 r_s = self.manifold.proj_tan0(r_s, c=self.c)
+            r_s = self.manifold.expmap0(r_s, c=self.c)
+            r_s = self.manifold.proj(r_s, c=self.c)
 
+#                 r_t = self.manifold.proj_tan0(r_t, c=self.c)
+            r_t = self.manifold.expmap0(r_t, c=self.c)
+            r_t = self.manifold.proj(r_t, c=self.c)
+            
             r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
             o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
             o_t = self.psi_2(r_t, edge_index_t, edge_attr_t)

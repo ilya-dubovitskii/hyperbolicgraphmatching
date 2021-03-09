@@ -174,11 +174,12 @@ class HypAct(Module):
 
 
 class MyHyperbolicGraphConvolution(MessagePassing):
-    def __init__(self, manifold, in_channels, out_channels, c, verbose=False):
+    def __init__(self, manifold, in_channels, out_channels, c, dropout=False, use_att=False, use_bias=False, verbose=False):
         super().__init__(aggr='add')
-#         print('what')
+        
         self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
-#         self.bias = nn.Parameter(torch.Tensor(out_channels))
+        self.bias = nn.Parameter(torch.Tensor(out_channels)) if use_bias else None
+        self.att = nn.Linear(2 * in_channels, 1) if use_att else None
         self.manifold = manifold
         self.c = c
         self.verbose = verbose
@@ -186,9 +187,8 @@ class MyHyperbolicGraphConvolution(MessagePassing):
         
     def reset_parameters(self):
         init.xavier_uniform_(self.weight, gain=1)
-       
-        print(f'shape: {self.weight.shape}, norm: {np.linalg.norm(self.weight.detach().cpu().numpy(), ord=2)}')
-#         init.constant_(self.bias, 0)
+        if self.bias is not None:
+            init.constant_(self.bias, 0)
 
     def aggregate(self, x_i, x_j, index, ptr=None, dim_size=None):
 #         print('AGGREGATE CALL')
@@ -201,10 +201,20 @@ class MyHyperbolicGraphConvolution(MessagePassing):
                 print(f'x_i shape: {x_i.shape}, x_j shape: {x_j.shape}')
 #             x_j.requires_grad_(True)
 #             x_j.register_hook(lambda grad: hook_fn(grad, msg='AGGREGATE BEFORE MATVEC'))
-            x_j = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
-#             x_j.register_hook(lambda grad: hook_fn(grad, msg='AGGREGATE AFTER MATVEC'))   
-            x_j = self.manifold.logmap(x_j, x_i, self.c, self.verbose)
-#             x_j.register_hook(lambda grad: hook_fn(grad, msg='AGGREGATE AFTER LOGMAP'))
+            
+            if self.att is not None:
+                att_scores = self.att(torch.cat([x_i, x_j], dim=-1))
+                att_scores = F.sigmoid(torch.cat)
+                x_j = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
+    #             x_j.register_hook(lambda grad: hook_fn(grad, msg='AGGREGATE AFTER MATVEC'))   
+                x_j = self.manifold.logmap(x_j, x_i, self.c, self.verbose)
+    #             x_j.register_hook(lambda grad: hook_fn(grad, msg='AGGREGATE AFTER LOGMAP'))
+                x_j = x_j * att_scores.reshape(-1, 1)
+            else:
+                x_j = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
+    #             x_j.register_hook(lambda grad: hook_fn(grad, msg='AGGREGATE AFTER MATVEC'))   
+                x_j = self.manifold.logmap(x_j, x_i, self.c, self.verbose)
+    #             x_j.register_hook(lambda grad: hook_fn(grad, msg='AGGREGATE AFTER LOGMAP'))
             if self.verbose:
                 print('++++++++++++++++++++AGGREGATE++++++++++++++++++++++++++')
             return scatter(x_j, index, dim=self.node_dim, dim_size=dim_size,
@@ -217,6 +227,8 @@ class MyHyperbolicGraphConvolution(MessagePassing):
 #         x_j.requires_grad_(True)
 #         x_j.register_hook(lambda grad: hook_fn(grad, msg='MESSAGE BEFORE MATVEC'))
         out = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
+        if self.bias is not None:
+            out = self.manigold.mobius_add(self.bias, x_j, self.c, self.verbose)
 #         out.register_hook(lambda grad: hook_fn(grad, msg='MESSAGE AFTER MATVEC'))
         if self.verbose:
             print('++++++++++++++++++++MESSAGE++++++++++++++++++++++++++')

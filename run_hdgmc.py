@@ -27,26 +27,25 @@ class SumEmbedding(object):
         return data
 
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cpu'
 path = osp.join('..', 'data', 'DBP15K')
 data = DBP15K(path, args.category, transform=SumEmbedding())[0].to(device)
 
 
 
-psi_1 = HyperbolicRelCNN(100, 20, args.num_layers, batch_norm=False,
-               cat=True, lin=False, dropout=0.5)
+psi_1 = HyperbolicRelCNN(Hyperboloid(), 100, 20, 1, args.num_layers, 
+               cat=True, lin=False, dropout=0.5, use_bias=False)
 
-# psi_1 = MyHGCN()
-# psi_1 = HyperbolicRelCNN(50, 50, 2)
-psi_2 = HyperbolicRelCNN(args.rnd_dim, args.rnd_dim, args.num_layers, batch_norm=False,
-               cat=True, lin=False, dropout=0.0)
-model = HDGMC(psi_1, psi_2, num_steps=None, k=args.k).to(device)
-# model = HDGMC_ver1(psi_1, psi_2, num_steps=None, k=args.k).to(device)
+psi_2 = HyperbolicRelCNN(Hyperboloid(), args.rnd_dim, args.rnd_dim, 1, 
+                         args.num_layers, cat=True, lin=False, dropout=0.0)
+# model = HDGMC(psi_1, psi_2, num_steps=None, k=args.k).to(device)
+model = HDGMC_ver1(psi_1, psi_2, num_steps=None, k=args.k).to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
 
-data.x1 = data.x1[:, :100] / 5 
-data.x2 = data.x2[:, :100] / 5
+data.x1 = data.x1[:, :100] / 20 
+data.x2 = data.x2[:, :100] / 20
 hyp = Hyperboloid()
 
 
@@ -70,9 +69,9 @@ norm_t = hyp.minkowski_dot(h_t, h_t)
 valid_t = ((norm_t > -1.1) & (norm_t < -0.9)).sum()
 valid_t = valid_t.float() / h_t.shape[-2] 
 
-# print('AT THE START')
-# print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
-# print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}, {norm_t.mean().cpu().detach().numpy().round(2)}')
+print('AT THE START')
+print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f}')
+print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}, {norm_t.mean().cpu().detach().numpy().round(2)}')
 
 data.x1 = h_s
 data.x2 = h_t
@@ -117,7 +116,7 @@ loss_history_test, hits1_history_test, hits10_history_test = [], [], []
 
 print('Optimize initial feature matching...')
 model.num_steps = 0
-for epoch in range(100):
+for epoch in range(5):
     if epoch == 50:
         print('Refine correspondence matrix...')
         model.num_steps = args.num_steps
@@ -142,29 +141,29 @@ for epoch in range(100):
                f'Hits@10: {hits10:.4f}'))
     
 
-plt.figure(figsize=(20,20))
-plt.subplot(2, 2, 1)
-plt.plot(loss_history_train, label='train')
-plt.plot(loss_history_test, label='test')
-plt.title('loss')
-plt.xlabel('epoch')
-plt.legend()
+# plt.figure(figsize=(20,20))
+# plt.subplot(2, 2, 1)
+# plt.plot(loss_history_train, label='train')
+# plt.plot(loss_history_test, label='test')
+# plt.title('loss')
+# plt.xlabel('epoch')
+# plt.legend()
 
 
 
-plt.subplot(2, 2, 2)
-plt.plot(hits1_history_train, label='train')
-plt.plot(hits1_history_test, label='test')
-plt.title('hits1')
-plt.xlabel('epoch')
-plt.legend()
+# plt.subplot(2, 2, 2)
+# plt.plot(hits1_history_train, label='train')
+# plt.plot(hits1_history_test, label='test')
+# plt.title('hits1')
+# plt.xlabel('epoch')
+# plt.legend()
 
 
 
-plt.subplot(2, 2, 3)
-plt.plot(hits10_history_train, label='train')
-plt.plot(hits10_history_test, label='test')
-plt.title('hits10')
-plt.xlabel('epoch')
-plt.legend()
-plt.savefig('progress_report/results_initial_ver3.png')
+# plt.subplot(2, 2, 3)
+# plt.plot(hits10_history_train, label='train')
+# plt.plot(hits10_history_test, label='test')
+# plt.title('hits10')
+# plt.xlabel('epoch')
+# plt.legend()
+# plt.savefig('progress_report/results_initial_ver3.png')

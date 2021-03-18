@@ -30,7 +30,7 @@ class HGCN(Encoder):
 
     def __init__(self, c, args):
         super(HGCN, self).__init__(c)
-        self.manifold = getattr(manifolds, args.manifold)()
+        self.manifold = getattr(manifolds.hyperboloid, args.manifold)()
         assert args.num_layers > 1
         dims, acts, self.curvatures = hyp_layers.get_dim_act_curv(args)
         self.curvatures.append(self.c)
@@ -66,7 +66,7 @@ class MyHGCN(Encoder):
 
     def __init__(self, c, args):
         super(MyHGCN, self).__init__(c)
-        self.manifold = getattr(manifolds, args.manifold)()
+        self.manifold = getattr(manifolds.hyperboloid, args.manifold)()
        
         assert args.num_layers > 1
         dims, acts, self.curvatures = hyp_layers.get_dim_act_curv(args)

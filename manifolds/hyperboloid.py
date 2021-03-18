@@ -55,21 +55,21 @@ class Hyperboloid():
         d = x.size(-1) - 1
         y = x.narrow(-1, 1, d)
 
-        y_sqnorm = torch.norm(y, p=2, dim=1, keepdim=True) ** 2 
+        y_sqnorm = torch.norm(y, p=2, dim=-1, keepdim=True) ** 2 
         mask = torch.ones_like(x)
-        mask[:, 0] = 0
+        mask[..., 0] = 0
         vals = torch.zeros_like(x)
-        vals[:, 0:1] = torch.sqrt(torch.clamp(K + y_sqnorm, min=self.eps[x.dtype]))
+        vals[..., 0:1] = torch.sqrt(torch.clamp(K + y_sqnorm, min=self.eps[x.dtype]))
         return vals + mask * x
 
     def proj_tan(self, u, x, c):
         K = 1. / c
-        d = x.size(1) - 1
-        ux = torch.sum(x.narrow(-1, 1, d) * u.narrow(-1, 1, d), dim=1, keepdim=True)
+        d = x.size(-1) - 1
+        ux = torch.sum(x.narrow(-1, 1, d) * u.narrow(-1, 1, d), dim=-1, keepdim=True)
         mask = torch.ones_like(u)
-        mask[:, 0] = 0
+        mask[..., 0] = 0
         vals = torch.zeros_like(u)
-        vals[:, 0:1] = ux / torch.clamp(x[:, 0:1], min=self.eps[x.dtype])
+        vals[..., 0:1] = ux / torch.clamp(x[..., 0:1], min=self.eps[x.dtype])
         return vals + mask * u
 
     def proj_tan0(self, u, c):
@@ -128,17 +128,18 @@ class Hyperboloid():
         if verbose:
             print(f'####### EXPMAP0 #######')
             print(f'Input: {torch.isnan(u).sum().item()} nans')
+            print(f'Input shape: u {u.shape}')
         K = 1. / c
         sqrtK = K ** 0.5
         d = u.size(-1) - 1
-        x = u.narrow(-1, 1, d).view(-1, d)
-        x_norm = torch.norm(x, p=2, dim=1, keepdim=True)
+        x = u.narrow(-1, 1, d)
+        x_norm = torch.norm(x, p=2, dim=-1, keepdim=True)
         x_norm = torch.clamp(x_norm, min=self.min_norm)
-#         print(x_norm, sqrtK)
         theta = x_norm / sqrtK
         res = torch.ones_like(u)
-        res[:, 0:1] = sqrtK * cosh(theta)
-        res[:, 1:] = sqrtK * sinh(theta) * x / x_norm
+#         print(f'res shape: {res.shape} theta shape: {theta.shape}')
+        res[..., 0:1] = sqrtK * cosh(theta)
+        res[..., 1:] = sqrtK * sinh(theta) * x / x_norm
         if verbose:
             print(f'max theta is: {torch.max(theta)}, sinh: {torch.max(sinh(theta))}, cosh: {torch.max(cosh(theta))}')
             print(f'res[0:1]: {torch.isnan(res[:, 0:1]).sum().item()} nans')
@@ -163,16 +164,13 @@ class Hyperboloid():
         K = 1. / c
         sqrtK = K ** 0.5
         d = x.size(-1) - 1
-        y = x.narrow(-1, 1, d).view(-1, d)
-        y_norm = torch.norm(y, p=2, dim=1, keepdim=True)
+        y = x.narrow(-1, 1, d)
+        y_norm = torch.norm(y, p=2, dim=-1, keepdim=True)
         y_norm = torch.clamp(y_norm, min=self.min_norm)
         res = torch.zeros_like(x)
-        if len(x.shape) > 1:
-            theta = torch.clamp(x[:, 0:1] / sqrtK, min=1.0 + self.eps[x.dtype])
-            res[:, 1:] = sqrtK * arcosh(theta) * y / y_norm
-        else:
-            theta = torch.clamp(x[0:1] / sqrtK, min=1.0 + self.eps[x.dtype])
-            res[1:] = sqrtK * arcosh(theta) * y / y_norm
+        theta = torch.clamp(x[..., 0:1] / sqrtK, min=1.0 + self.eps[x.dtype])
+#         print(f'res: {res.shape} theta: {theta.shape}, y: {y.shape}, y_norm: {y_norm.shape}')
+        res[..., 1:] = sqrtK * arcosh(theta) * y / y_norm
         if verbose:      
             print(f'zeros in denominator {(y_norm == 0).sum().item()}')      
             print(f'theta: {torch.isnan(theta).sum().item()}, \
@@ -220,15 +218,12 @@ class Hyperboloid():
         x0 = x.narrow(-1, 0, 1)
         d = x.size(-1) - 1
         y = x.narrow(-1, 1, d)
-        y_norm = torch.clamp(torch.norm(y, p=2, dim=1, keepdim=True), min=self.min_norm)
+        y_norm = torch.clamp(torch.norm(y, p=2, dim=-1, keepdim=True), min=self.min_norm)
         y_normalized = y / y_norm
         v = torch.ones_like(x)
-        v[:, 0:1] = - y_norm 
-        v[:, 1:] = (sqrtK - x0) * y_normalized
-        if len(u.shape) > 1:
-            alpha = torch.sum(y_normalized * u[:, 1:], dim=1, keepdim=True) / sqrtK
-        else:
-            alpha = torch.sum(y_normalized * u[1:], dim=1, keepdim=True) / sqrtK
+        v[..., 0:1] = - y_norm 
+        v[..., 1:] = (sqrtK - x0) * y_normalized
+        alpha = torch.sum(y_normalized * u[..., 1:], dim=-1, keepdim=True) / sqrtK
         res = u - alpha * v
         return self.proj_tan(res, x, c)
 
@@ -239,7 +234,7 @@ class Hyperboloid():
         K = 1. / c
         sqrtK = K ** 0.5
         d = x.size(-1) - 1
-        out = sqrtK * x.narrow(-1, 1, d) / (x[:, 0:1] + sqrtK)
+        out = sqrtK * x.narrow(-1, 1, d) / (x[..., 0:1] + sqrtK)
         if verbose:
             print((x[:, 0:1] + sqrtK == 0).sum().item())
             print(f'Input: {torch.isnan(out).sum().item()} nans')
@@ -252,8 +247,8 @@ class Hyperboloid():
             print(f'Input: {torch.isnan(x).sum().item()} nans')
         K = 1./ c
         sqrtK = K ** 0.5
-        sqnorm = torch.norm(x, p=2, dim=1, keepdim=True) ** 2
-        out = sqrtK * torch.cat([K + sqnorm, 2 * sqrtK * x], dim=1) / (K - sqnorm)
+        sqnorm = torch.norm(x, p=2, dim=-1, keepdim=True) ** 2
+        out = sqrtK * torch.cat([K + sqnorm, 2 * sqrtK * x], dim=-1) / (K - sqnorm)
         
         if verbose:
             print(f'Zeros in denominator: {(K - sqnorm == 0).sum().item()}')

@@ -9,9 +9,10 @@ from torch_scatter import scatter_add
 from torch_geometric.utils import to_dense_batch
 from torch_geometric.nn.inits import reset
 
+from scipy.special import beta
 
 from manifolds.hyperboloid import Hyperboloid
-from layers.hyp_layers import MyHyperbolicGraphConvolution, HypLinear
+from layers.hyp_layers import MyHyperbolicGraphConvolution, HypLinear, HypReLU
 from layers.rel import RelConv
 
 import math
@@ -95,9 +96,10 @@ class RelCNN(torch.nn.Module):
     
 class HyperbolicRelCNN(torch.nn.Module):
     def __init__(self, manifold, in_channels, out_channels, c, num_layers,
-                 cat=True, lin=True, dropout=0.0, use_bias=True):
+                 cat=True, lin=True, dropout=0.0, use_att=False, use_bias=True):
         super(HyperbolicRelCNN, self).__init__()
-
+        
+        assert cat in ['none', 'eucl', 'hyp1', 'hyp2']
         self.in_channels = in_channels
         self.num_layers = num_layers
         self.cat = cat
@@ -105,43 +107,90 @@ class HyperbolicRelCNN(torch.nn.Module):
         self.dropout = dropout
         self.manifold = manifold
         self.c = c
-
+        
         self.convs = torch.nn.ModuleList()
 
         for _ in range(self.num_layers):
-            self.convs.append(MyHyperbolicGraphConvolution(manifold, in_channels, out_channels, c, dropout, use_bias))
+            self.convs.append(MyHyperbolicGraphConvolution(manifold, in_channels, out_channels, c, dropout=dropout, use_att=use_att, use_bias=use_bias))
             in_channels = out_channels
 
-        if self.cat:
+        if self.cat == 'hyp2':
+            in_channels = self.in_channels + num_layers * (out_channels - 1)
+        elif self.cat in ['eucl', 'hyp1']:
             in_channels = self.in_channels + num_layers * out_channels
         else:
             in_channels = out_channels
 
         if self.lin:
             self.out_channels = out_channels
+            print(f'in channels in lin: ', in_channels)
             self.final = HypLinear(manifold, in_channels, out_channels, c, dropout, use_bias)
         else:
             self.out_channels = in_channels
+        
+        total_channels = self.in_channels + self.num_layers * self.out_channels
+        
+        self.beta_in = beta(self.in_channels/2., 1./self.in_channels)
+        self.beta_out = beta(self.out_channels/2., 1./self.out_channels)
+        self.beta_total = beta(total_channels/2., 1./total_channels)
 
         self.reset_parameters()
-
+    
+    def set_verbose(self, verbose=True):
+        for conv in self.convs:
+            conv.set_verbose(verbose)
+    
     def reset_parameters(self):
         for conv in self.convs:
             conv.reset_parameters()
         if self.lin:
             self.final.reset_parameters()
 
-    def forward(self, x, edge_index, *args):
+    def forward(self, x, edge_index, sizes=None):
         """"""
-        xs = [x]
-
-        for conv in self.convs:
-            x = conv(xs[-1], edge_index)
-            x = F.dropout(x, p=self.dropout, training=self.training)
-            xs.append(x)
-
-        x = torch.cat(xs, dim=-1) if self.cat else xs[-1]
+#         print(f'x shape at the start is: {x.shape}')
+        if sizes is not None:
+            batch_size = sizes[-1]
+#             print('batch size', batch_size)
+#             print(batch_size)
+            xs = [x[:batch_size]]
+            x_temp = x
+            for i, conv in enumerate(self.convs):
+                x_temp = (conv(x_temp, edge_index[i]))[:sizes[i+1]]
+                xs.append(x_temp[:batch_size])
+        else:
+            xs = [x]
+            for conv in self.convs:
+                x = conv(xs[-1], edge_index)
+                xs.append(x)
+            
+        if self.cat == 'eucl':
+            x = torch.cat(xs, dim=-1)
+            
+        elif self.cat == 'hyp1':
+            xs[0] = self.manifold.logmap0(xs[0], c=self.c) * self.beta_total / self.beta_in
+            
+            for x in xs[1:]:
+                x = self.manifold.logmap0(x, c=self.c) * self.beta_total / self.beta_out    
+            x = torch.cat(xs, dim=-1)
+            x = self.manifold.expmap0(x, c=self.c)
+            
+        elif self.cat == 'hyp2':
+            xs_temp = []
+            xs_0 = torch.zeros(*xs[0].shape[:-1], 1).to(xs[0].device)
+            for x in xs:
+#                 print(f'shapes: {x.shape}, narrowed: {x.narrow(-1, 1, x.shape[-1]-1).shape}, 0: {((x[..., 0] * x[..., 0]).unsqueeze(-1)).shape}')
+                xs_0 = xs_0 + ((x[..., 0] * x[..., 0]).unsqueeze(-1))
+                xs_temp.append(x.narrow(-1, 1, x.shape[-1]-1))
+            xs_0 = torch.sqrt(xs_0)
+            x = torch.cat([xs_0, *xs_temp], dim=-1)
+#             print(f'x shape -1 = {x.shape[-1]}')
+        else:
+            x = xs[-1]
+            
+#         print(f'x shape before lin is: {x.shape}')
         x = self.final(x) if self.lin else x
+        
         return x
 
     def __repr__(self):
@@ -216,10 +265,14 @@ class HDGMC(torch.nn.Module):
         self.manifold = psi_1.manifold
         self.c = psi_1.c
         self.mlp = Seq(
-            Lin(psi_2.out_channels, psi_2.out_channels),
-            ReLU(),
-            Lin(psi_2.out_channels, 1),
+            HypLinear(self.manifold, psi_2.out_channels, 10, self.c, 0.0, True),
+            HypReLU(self.manifold, self.c),
+            HypLinear(self.manifold, 10, 1, self.c, 0.0, True),
         )
+        
+    def set_verbose(self, verbose=True):
+        self.psi1.set_verbose(verbose)
+        self.psi2.set_verbose(verbose)
 
     def reset_parameters(self):
         self.psi_1.reset_parameters()
@@ -235,7 +288,8 @@ class HDGMC(torch.nn.Module):
         r"""Includes the ground-truth values in :obj:`y` to the index tensor
         :obj:`S_idx`."""
         (B, N_s), (row, col), k = s_mask.size(), y, S_idx.size(-1)
-
+#         print(f'shapes: mask, {s_mask.shape}, row col {row.shape}, {col.shape}, S_idx {S_idx.shape}')
+#         print(f'mask:\n{s_mask}\nrow{row}\ncol{col}\nS_idx\n{S_idx}\n')
         gt_mask = (S_idx[s_mask][row] != col.view(-1, 1)).all(dim=-1)
 
         sparse_mask = gt_mask.new_zeros((s_mask.sum(), ))
@@ -249,8 +303,9 @@ class HDGMC(torch.nn.Module):
 
         return S_idx.masked_scatter(dense_mask, col[gt_mask])
 
-    def forward(self, x_s, edge_index_s, edge_attr_s, batch_s, x_t,
-                edge_index_t, edge_attr_t, batch_t, y=None):
+    def forward(self, x_s, edge_index_s, batch_s, x_t,
+                edge_index_t, batch_t, sizes_s=None, sizes_t=None, y=None):
+#         print('EE 1 here is: ', edge_index_s_total.shape  if edge_index_s_total is not None else 'what')
         r"""
         Args:
             x_s (Tensor): Source graph node features of shape
@@ -284,8 +339,10 @@ class HDGMC(torch.nn.Module):
             of shapes :obj:`[batch_size * num_nodes, num_nodes]`. The
             correspondence matrix are either given as dense or sparse matrices.
         """
-        h_s = self.psi_1(x_s, edge_index_s, edge_attr_s)
-        h_t = self.psi_1(x_t, edge_index_t, edge_attr_t)
+        h_s = self.psi_1(x_s, edge_index_s, sizes=sizes_s)
+        h_t = self.psi_1(x_t, edge_index_t, sizes=sizes_t)
+        h_s_len = h_s.shape[0]
+#         print(f'shapes: hs: {h_s.shape} y: {y.shape if y is not None else "wops"}')
 
         h_s, h_t = (h_s.detach(), h_t.detach()) if self.detach else (h_s, h_t)
         
@@ -314,6 +371,7 @@ class HDGMC(torch.nn.Module):
         
         assert h_s.size(0) == h_t.size(0), 'Encountered unequal batch-sizes'
         (B, N_s, C_out), N_t = h_s.size(), h_t.size(1)
+        
         R_in, R_out = self.psi_2.in_channels, self.psi_2.out_channels
 
     
@@ -340,6 +398,10 @@ class HDGMC(torch.nn.Module):
         S_0 = S_hat.softmax(dim=-1)[s_mask]
 
         for _ in range(self.num_steps):
+            
+            if sizes_s is not None:
+                N_s, N_t = sizes_s[0], sizes_t[0]
+            
             S = S_hat.softmax(dim=-1)
             r_s = torch.randn((B, N_s, R_in), dtype=h_s.dtype,
                               device=h_s.device)
@@ -349,33 +411,39 @@ class HDGMC(torch.nn.Module):
             idx = S_idx.view(B, N_s * k, 1)
             r_t = scatter_add(tmp_t, idx, dim=1, dim_size=N_t)
 
-# #                 r_s = self.manifold.proj_tan0(r_s, c=self.c)
-#             r_s = self.manifold.expmap0(r_s, c=self.c)
-#             r_s = self.manifold.proj(r_s, c=self.c)
+#                 r_s = self.manifold.proj_tan0(r_s, c=self.c)
+            r_s = self.manifold.expmap0(r_s, c=self.c)
+            r_s = self.manifold.proj(r_s, c=self.c)
 
-# #                 r_t = self.manifold.proj_tan0(r_t, c=self.c)
-#             r_t = self.manifold.expmap0(r_t, c=self.c)
-#             r_t = self.manifold.proj(r_t, c=self.c)
+#                 r_t = self.manifold.proj_tan0(r_t, c=self.c)
+            r_t = self.manifold.expmap0(r_t, c=self.c)
+            r_t = self.manifold.proj(r_t, c=self.c)
 
             r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
-            o_s = self.psi_2(r_s, edge_index_s, edge_attr_s)
-            o_t = self.psi_2(r_t, edge_index_t, edge_attr_t)
+            if sizes_s is not None:
+#                 print('ALRITE MATE')
+#                 print(f'shapes: r: {r_s.shape}, {edge_index_s[-1].max()}')
+                o_s = self.psi_2(r_s, edge_index_s, sizes=sizes_s)
+                o_t = self.psi_2(r_t, edge_index_t, sizes=sizes_t)
+            else:
+                o_s = self.psi_2(r_s, edge_index_s)
+                o_t = self.psi_2(r_t, edge_index_t)
             o_s, o_t = to_dense(o_s, s_mask), to_dense(o_t, t_mask)
 
             o_s = o_s.view(B, N_s, 1, R_out).expand(-1, -1, k, -1)
             idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, R_out)
             tmp_t = torch.gather(o_t.view(B, N_t, R_out), -2, idx)
-            D = o_s - tmp_t.view(B, N_s, k, R_out)
+            D = self.manifold.mobius_add(o_s, -tmp_t.view(B, N_s, k, R_out), c=self.c)
             S_hat = S_hat + self.mlp(D).squeeze(-1)
 
         S_L = S_hat.softmax(dim=-1)[s_mask]
         S_idx = S_idx[s_mask]
 
         # Convert sparse layout to `torch.sparse_coo_tensor`.
-        row = torch.arange(x_s.size(0), device=S_idx.device)
+        row = torch.arange(h_s_len, device=S_idx.device)
         row = row.view(-1, 1).repeat(1, k)
         idx = torch.stack([row.view(-1), S_idx.view(-1)], dim=0)
-        size = torch.Size([x_s.size(0), N_t])
+        size = torch.Size([h_s_len, N_t])
 
         S_sparse_0 = torch.sparse_coo_tensor(
             idx, S_0.view(-1), size, requires_grad=S_0.requires_grad)
@@ -474,6 +542,21 @@ class HDGMC(torch.nn.Module):
                 '    num_steps={}, k={}\n)').format(self.__class__.__name__,
                                                     self.psi_1, self.psi_2,
                                                     self.num_steps, self.k)
+
+    
+    
+    
+    
+    
+######################################################################################
+######################################################################################
+
+
+
+
+
+
+
 
 class HDGMC_ver1(HDGMC):
     def __init__(self, psi_1, psi_2, num_steps, k=-1, detach=False):
@@ -612,10 +695,10 @@ class HDGMC_ver1(HDGMC):
         S_idx = S_idx[s_mask]
 
         # Convert sparse layout to `torch.sparse_coo_tensor`.
-        row = torch.arange(x_s.size(0), device=S_idx.device)
+        row = torch.arange(h_s.size(0), device=S_idx.device)
         row = row.view(-1, 1).repeat(1, k)
         idx = torch.stack([row.view(-1), S_idx.view(-1)], dim=0)
-        size = torch.Size([x_s.size(0), N_t])
+        size = torch.Size([h_s.size(0), N_t])
 
         S_sparse_0 = torch.sparse_coo_tensor(
             idx, S_0.view(-1), size, requires_grad=S_0.requires_grad)

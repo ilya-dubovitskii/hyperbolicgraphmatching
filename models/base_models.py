@@ -27,7 +27,7 @@ class BaseModel(nn.Module):
                 self.c = self.c.to(args.device)
         else:
             self.c = nn.Parameter(torch.Tensor([1.]))
-        self.manifold = getattr(manifolds, self.manifold_name)()
+        self.manifold = getattr(manifolds.hyperboloid, self.manifold_name)()
         if self.manifold.name == 'Hyperboloid':
             args.feat_dim = args.feat_dim + 1
         self.nnodes = args.n_nodes

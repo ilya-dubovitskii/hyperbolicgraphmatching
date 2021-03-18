@@ -24,6 +24,11 @@ try:
 except ImportError:
     LazyTensor = None
 
+def show_memory(device, msg=None):
+    r = torch.cuda.memory_reserved(device) 
+    a = torch.cuda.memory_allocated(device)
+    f = r-a  # free inside reserved
+    print(f'{msg} FREE MEMORY ON DEVICE{device} IS {f/1024.**3:.03f}')
     
 def hook_fn(grad, msg=None):
 #     print(f'\n------------{msg}------------')
@@ -135,6 +140,10 @@ class HyperbolicRelCNN(torch.nn.Module):
         self.beta_total = beta(total_channels/2., 1./total_channels)
 
         self.reset_parameters()
+    
+    @property
+    def device(self):
+        return self.convs[0].weight.device
     
     def set_verbose(self, verbose=True):
         for conv in self.convs:
@@ -264,10 +273,16 @@ class HDGMC(torch.nn.Module):
         self.backend = 'auto'
         self.manifold = psi_1.manifold
         self.c = psi_1.c
+#         self.mlp = Seq(
+#             HypLinear(self.manifold, psi_2.out_channels, 10, self.c, 0.0, True),
+#             HypReLU(self.manifold, self.c),
+#             HypLinear(self.manifold, 10, 1, self.c, 0.0, True),
+#         )
+        
         self.mlp = Seq(
-            HypLinear(self.manifold, psi_2.out_channels, 10, self.c, 0.0, True),
-            HypReLU(self.manifold, self.c),
-            HypLinear(self.manifold, 10, 1, self.c, 0.0, True),
+            Lin(psi_2.out_channels, 10),
+            ReLU(),
+            Lin(10, 1),
         )
         
     def set_verbose(self, verbose=True):
@@ -278,6 +293,11 @@ class HDGMC(torch.nn.Module):
         self.psi_1.reset_parameters()
         self.psi_2.reset_parameters()
         reset(self.mlp)
+        
+    def multi_gpu(self, device1, device2, device3):
+        self.psi_1 = self.psi_1.to(device1)
+        self.psi_2 = self.psi_2.to(device2)
+        self.mlp = self.mlp.to(device3)
 
     def __top_k__(self, x_s, x_t):  # pragma: no cover
         S_ij = (x_s @ x_t.transpose(-1, -2)) - 2 * torch.einsum('bi,bj->bij', (x_s[..., : , 0], x_t[..., : , 0]))
@@ -306,6 +326,7 @@ class HDGMC(torch.nn.Module):
     def forward(self, x_s, edge_index_s, batch_s, x_t,
                 edge_index_t, batch_t, sizes_s=None, sizes_t=None, y=None):
 #         print('EE 1 here is: ', edge_index_s_total.shape  if edge_index_s_total is not None else 'what')
+        device_3 = 'cuda:2'
         r"""
         Args:
             x_s (Tensor): Source graph node features of shape
@@ -392,6 +413,7 @@ class HDGMC(torch.nn.Module):
         idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, C_out)
         tmp_t = torch.gather(h_t.view(B, N_t, C_out), -2, idx)
         S_hat = (tmp_s * tmp_t.view(B, N_s, k, C_out)).sum(dim=-1) - 2 * (tmp_s[..., 0] * tmp_t.view(B, N_s, k, C_out)[..., 0])
+        
 #             print('....................')
 #             print((tmp_s * tmp_t.view(B, N_s, k, C_out)).sum(dim=-1).shape, (tmp_s[..., 0] * tmp_t.view(B, N_s, k, C_out)[..., 0]).shape)
 #             print('.........................')
@@ -402,13 +424,13 @@ class HDGMC(torch.nn.Module):
             if sizes_s is not None:
                 N_s, N_t = sizes_s[0], sizes_t[0]
             
-            S = S_hat.softmax(dim=-1)
+            S = S_hat.softmax(dim=-1).to(self.psi_2.device)
             r_s = torch.randn((B, N_s, R_in), dtype=h_s.dtype,
-                              device=h_s.device)
+                              device=self.psi_2.device) / 10
 
             tmp_t = r_s.view(B, N_s, 1, R_in) * S.view(B, N_s, k, 1)
             tmp_t = tmp_t.view(B, N_s * k, R_in)
-            idx = S_idx.view(B, N_s * k, 1)
+            idx = S_idx.view(B, N_s * k, 1).to(self.psi_2.device)
             r_t = scatter_add(tmp_t, idx, dim=1, dim_size=N_t)
 
 #                 r_s = self.manifold.proj_tan0(r_s, c=self.c)
@@ -420,21 +442,36 @@ class HDGMC(torch.nn.Module):
             r_t = self.manifold.proj(r_t, c=self.c)
 
             r_s, r_t = to_sparse(r_s, s_mask), to_sparse(r_t, t_mask)
+            
+#             print(f'devices: r_t: {r_t.device}, idx: {idx.device}')
+
             if sizes_s is not None:
 #                 print('ALRITE MATE')
 #                 print(f'shapes: r: {r_s.shape}, {edge_index_s[-1].max()}')
                 o_s = self.psi_2(r_s, edge_index_s, sizes=sizes_s)
                 o_t = self.psi_2(r_t, edge_index_t, sizes=sizes_t)
             else:
-                o_s = self.psi_2(r_s, edge_index_s)
-                o_t = self.psi_2(r_t, edge_index_t)
+                o_s = self.psi_2(r_s, edge_index_s.to(self.psi_2.device))
+                o_t = self.psi_2(r_t, edge_index_t.to(self.psi_2.device))
             o_s, o_t = to_dense(o_s, s_mask), to_dense(o_t, t_mask)
 
             o_s = o_s.view(B, N_s, 1, R_out).expand(-1, -1, k, -1)
-            idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, R_out)
+            idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, R_out).to(self.psi_1.device)
+#             print(f'devices: o_t: {o_t.device}, idx: {idx.device}')
+            o_t = o_t.to(self.psi_1.device)
             tmp_t = torch.gather(o_t.view(B, N_t, R_out), -2, idx)
-            D = self.manifold.mobius_add(o_s, -tmp_t.view(B, N_s, k, R_out), c=self.c)
-            S_hat = S_hat + self.mlp(D).squeeze(-1)
+#             show_memory(device_3, msg='BEFORE D')
+#             print(f'SHAPES: o_s: {o_s.shape}, tmp_t: {tmp_t.view(B, N_s, k, R_out).shape}')
+            
+            
+#             D = self.manifold.mobius_add(-o_s.to(device_3), tmp_t.view(B, N_s, k, R_out).to(device_3), c=self.c)
+            
+            a1 = self.manifold.logmap0(o_s.to(device_3), self.c)
+            a2 = self.manifold.logmap0(tmp_t.view(B, N_s, k, R_out).to(device_3), c=self.c)
+            
+            D = a1 - a2
+#             show_memory(device_3, msg='AFTER D')
+            S_hat = S_hat.to(device_3) + self.mlp(D).squeeze(-1).to(device_3)
 
         S_L = S_hat.softmax(dim=-1)[s_mask]
         S_idx = S_idx[s_mask]
@@ -451,7 +488,7 @@ class HDGMC(torch.nn.Module):
         S_sparse_0.__val__ = S_0
 
         S_sparse_L = torch.sparse_coo_tensor(
-            idx, S_L.view(-1), size, requires_grad=S_L.requires_grad)
+            idx, S_L.view(-1).to('cuda:0'), size, requires_grad=S_L.requires_grad)
         S_sparse_L.__idx__ = S_idx
         S_sparse_L.__val__ = S_L
 
@@ -524,13 +561,14 @@ class HDGMC(torch.nn.Module):
             reduction (string, optional): Specifies the reduction to apply to
                 the output: :obj:`'mean'|'sum'`. (default: :obj:`'mean'`)
         """
+        S, y = S.to('cuda:0'), y.to('cuda:0')
         assert reduction in ['mean', 'sum']
         if not S.is_sparse:
             pred = S[y[0]].argsort(dim=-1, descending=True)[:, :k]
         else:
             assert S.__idx__ is not None and S.__val__ is not None
             perm = S.__val__[y[0]].argsort(dim=-1, descending=True)[:, :k]
-            pred = torch.gather(S.__idx__[y[0]], -1, perm)
+            pred = torch.gather(S.__idx__[y[0]].to('cuda:0'), -1, perm.to('cuda:0'))
 
         correct = (pred == y[1].view(-1, 1)).sum().item()
         return correct / y.size(1) if reduction == 'mean' else correct

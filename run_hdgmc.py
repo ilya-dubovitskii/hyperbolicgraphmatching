@@ -16,8 +16,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--category', type=str, default='fr_en')
 parser.add_argument('--train_size', type=int, default=4121)
 parser.add_argument('--dim', type=int, default=256)
-parser.add_argument('--rnd_dim', type=int, default=25)
-parser.add_argument('--num_layers', type=int, default=1)
+parser.add_argument('--rnd_dim', type=int, default=50)
+parser.add_argument('--num_layers', type=int, default=3)
 parser.add_argument('--num_steps', type=int, default=10)
 parser.add_argument('--k', type=int, default=10)
 args = parser.parse_args()
@@ -30,16 +30,20 @@ class SumEmbedding(object):
     
 
 
-
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:0'
+device_1 = 'cuda:0'
+device_2 = 'cuda:1'
+device_3 = 'cuda:2'
 path = osp.join('..', 'data', 'DBP15K')
 data = DBP15K(path, args.category, transform=SumEmbedding())[0].to(device)
 
 
-data.x1 = data.x1[..., :50] / 10
-data.x2 = data.x2[..., :50] / 10
+data.x1 = data.x1 / 10
+data.x2 = data.x2 / 10
 
-args.dim=50
+args.dim=100
+args.num_layers=1
+args.k=5
 
 psi_1 = HyperbolicRelCNN(Hyperboloid(), data.x1.shape[-1], args.dim, 1, args.num_layers, 
                cat='hyp2', lin=True, dropout=0.0, use_bias=True, use_att=False)
@@ -50,9 +54,10 @@ psi_2 = HyperbolicRelCNN(Hyperboloid(), args.rnd_dim, args.rnd_dim, 1,
 # psi_2 = RelCNN(args.rnd_dim, args.rnd_dim, 
 #                          args.num_layers, cat='eucl', lin=False, dropout=0.0)
 model = HDGMC(psi_1, psi_2, num_steps=None, k=args.k).to(device)
+model.multi_gpu(device_1, device_2, device_3)
 # model = HDGMC_ver1(psi_1, psi_2, num_steps=None, k=args.k).to(device)
 
-optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
 
 hyp = Hyperboloid()
@@ -93,8 +98,8 @@ test_y = data.test_y
 def train():
     model.train()
     optimizer.zero_grad()
-    _, S_L = model(data.x1, data.edge_index1, None, None, data.x2,
-                   data.edge_index2, None, None, train_y)
+    _, S_L = model(data.x1, data.edge_index1, None, data.x2,
+                   data.edge_index2, None, y=train_y)
     
     loss = model.loss(S_L, train_y)
     hits1 = model.acc(S_L, train_y)
@@ -111,8 +116,8 @@ def train():
 def test():
     model.eval()
 
-    _, S_L = model(data.x1, data.edge_index1, None, None, data.x2,
-                   data.edge_index2, None, None)
+    _, S_L = model(data.x1, data.edge_index1, None, data.x2,
+                   data.edge_index2, None)
     
     loss = model.loss(S_L, test_y)
     hits1 = model.acc(S_L, test_y)
@@ -125,11 +130,11 @@ loss_history_test, hits1_history_test, hits10_history_test = [], [], []
 
 print('Optimize initial feature matching...')
 model.num_steps = 0
-for epoch in range(100):
-    if epoch == 50:
+for epoch in range(1000):
+    if epoch == 100:
         print('Refine correspondence matrix...')
         model.num_steps = args.num_steps
-        model.detach = True
+#         model.detach = True
 
     loss, hits1, hits10 = train()
 #     print((f'{epoch:03d}: Loss: {loss:.4f}, Hits@1: {hits1:.4f}, '

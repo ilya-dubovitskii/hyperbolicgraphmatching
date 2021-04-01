@@ -42,20 +42,19 @@ data.x1 = data.x1 / 10
 data.x2 = data.x2 / 10
 
 args.dim=100
+args.rnd_dim=25
 args.num_layers=1
+args.num_steps=5
 args.k=5
 
 psi_1 = HyperbolicRelCNN(Hyperboloid(), data.x1.shape[-1], args.dim, 1, args.num_layers, 
-               cat='hyp2', lin=True, dropout=0.0, use_bias=True, use_att=False)
+               cat='hyp1', lin=True, dropout=0.0, use_bias=True, use_att=False)
 
 psi_2 = HyperbolicRelCNN(Hyperboloid(), args.rnd_dim, args.rnd_dim, 1, 
                          args.num_layers, cat='hyp1', lin=False, dropout=0.0, use_bias=False, use_att=False)
 
-# psi_2 = RelCNN(args.rnd_dim, args.rnd_dim, 
-#                          args.num_layers, cat='eucl', lin=False, dropout=0.0)
 model = HDGMC(psi_1, psi_2, num_steps=None, k=args.k).to(device)
 model.multi_gpu(device_1, device_2, device_3)
-# model = HDGMC_ver1(psi_1, psi_2, num_steps=None, k=args.k).to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
@@ -130,8 +129,8 @@ loss_history_test, hits1_history_test, hits10_history_test = [], [], []
 
 print('Optimize initial feature matching...')
 model.num_steps = 0
-for epoch in range(1000):
-    if epoch == 100:
+for epoch in range(100):
+    if epoch == 50:
         print('Refine correspondence matrix...')
         model.num_steps = args.num_steps
 #         model.detach = True

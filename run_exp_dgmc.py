@@ -62,14 +62,20 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 path = osp.join('..', 'data', 'DBP15K')
 
-results_dict = {'hits1': {}, 'hits10': {}}
+results_dict = {'hits1b': {}, 'hits10b': {}, 'hits1a': {}, 'hits10a': {}}
+
+args.dim=100
+args.rnd_dim=25
+args.num_layers=1
+args.num_steps=10
+args.k=5
 
 for category in ['fr_en', 'en_fr', 'zh_en', 'en_zh', 'en_ja', 'ja_en']:
     print(f'======================={category}=======================')
     data = DBP15K(path, category, transform=SumEmbedding())[0].to(device)
 
-    data.x1 = data.x1[..., :100] 
-    data.x2 = data.x2[..., :100]
+    data.x1 = data.x1 
+    data.x2 = data.x2
 
     psi_1 = RelCNN(data.x1.shape[-1], args.dim, args.num_layers, 
                    cat=True, lin=True, dropout=0.5)
@@ -90,11 +96,15 @@ for category in ['fr_en', 'en_fr', 'zh_en', 'en_zh', 'en_ja', 'ja_en']:
     best_hits1 = 0
     best_hits10 = 0
     model.num_steps = 0
-    for epoch in range(40):
-        if epoch == 20:
+    for epoch in range(100):
+        if epoch == 50:
             print('Refine correspondence matrix...')
             model.num_steps = args.num_steps
             model.detach = True
+            results_dict['hits1b'][category] = np.round(best_hits1, 3)
+            results_dict['hits10b'][category] = np.round(best_hits10, 3)
+            best_hits1 = 0
+            best_hits10 = 0
 
         loss, hits1, hits10 = train()
     #     print((f'{epoch:03d}: Loss: {loss:.4f}, Hits@1: {hits1:.4f}, '
@@ -110,9 +120,9 @@ for category in ['fr_en', 'en_fr', 'zh_en', 'en_zh', 'en_ja', 'ja_en']:
             print((f'{epoch:03d}: Loss: {loss:.4f}, Hits@1: {hits1:.4f}, '
                    f'Hits@10: {hits10:.4f}'))
 
-    results_dict['hits1'][category] = np.round(best_hits1, 3)
-    results_dict['hits10'][category] = np.round(best_hits10, 3)
+    results_dict['hits1a'][category] = np.round(best_hits1, 3)
+    results_dict['hits10a'][category] = np.round(best_hits10, 3)
 
 
-with open(f'results_dict_dgmc.json', 'w') as fp:
+with open(f'results_dict_dgmc_new.json', 'w') as fp:
     json.dump(results_dict, fp)

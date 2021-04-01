@@ -273,21 +273,16 @@ class HDGMC(torch.nn.Module):
         self.backend = 'auto'
         self.manifold = psi_1.manifold
         self.c = psi_1.c
-#         self.mlp = Seq(
-#             HypLinear(self.manifold, psi_2.out_channels, 10, self.c, 0.0, True),
-#             HypReLU(self.manifold, self.c),
-#             HypLinear(self.manifold, 10, 1, self.c, 0.0, True),
-#         )
-        
         self.mlp = Seq(
-            Lin(psi_2.out_channels, 10),
-            ReLU(),
-            Lin(10, 1),
+            HypLinear(self.manifold, psi_2.out_channels, 10, self.c, 0.0, True),
+            HypReLU(self.manifold, self.c),
+            HypLinear(self.manifold, 10, 2, self.c, 0.0, True),
         )
         
+        
     def set_verbose(self, verbose=True):
-        self.psi1.set_verbose(verbose)
-        self.psi2.set_verbose(verbose)
+        self.psi_1.set_verbose(verbose)
+        self.psi_2.set_verbose(verbose)
 
     def reset_parameters(self):
         self.psi_1.reset_parameters()
@@ -297,7 +292,7 @@ class HDGMC(torch.nn.Module):
     def multi_gpu(self, device1, device2, device3):
         self.psi_1 = self.psi_1.to(device1)
         self.psi_2 = self.psi_2.to(device2)
-        self.mlp = self.mlp.to(device3)
+        self.mlp = self.mlp.to(device1)
 
     def __top_k__(self, x_s, x_t):  # pragma: no cover
         S_ij = (x_s @ x_t.transpose(-1, -2)) - 2 * torch.einsum('bi,bj->bij', (x_s[..., : , 0], x_t[..., : , 0]))
@@ -326,7 +321,6 @@ class HDGMC(torch.nn.Module):
     def forward(self, x_s, edge_index_s, batch_s, x_t,
                 edge_index_t, batch_t, sizes_s=None, sizes_t=None, y=None):
 #         print('EE 1 here is: ', edge_index_s_total.shape  if edge_index_s_total is not None else 'what')
-        device_3 = 'cuda:2'
         r"""
         Args:
             x_s (Tensor): Source graph node features of shape
@@ -426,7 +420,7 @@ class HDGMC(torch.nn.Module):
             
             S = S_hat.softmax(dim=-1).to(self.psi_2.device)
             r_s = torch.randn((B, N_s, R_in), dtype=h_s.dtype,
-                              device=self.psi_2.device) / 10
+                              device=self.psi_2.device) / (5 * R_in)
 
             tmp_t = r_s.view(B, N_s, 1, R_in) * S.view(B, N_s, k, 1)
             tmp_t = tmp_t.view(B, N_s * k, R_in)
@@ -454,24 +448,28 @@ class HDGMC(torch.nn.Module):
                 o_s = self.psi_2(r_s, edge_index_s.to(self.psi_2.device))
                 o_t = self.psi_2(r_t, edge_index_t.to(self.psi_2.device))
             o_s, o_t = to_dense(o_s, s_mask), to_dense(o_t, t_mask)
-
-            o_s = o_s.view(B, N_s, 1, R_out).expand(-1, -1, k, -1)
-            idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, R_out).to(self.psi_1.device)
+            
+            o_s, o_t = self.manifold.to_poincare(o_s, c=self.c), \
+                                self.manifold.to_poincare(o_t, c=self.c)
+            
+            o_s = o_s.view(B, N_s, 1, R_out-1).expand(-1, -1, k, -1)
+            idx = S_idx.view(B, N_s * k, 1).expand(-1, -1, R_out-1).to(self.psi_1.device)
 #             print(f'devices: o_t: {o_t.device}, idx: {idx.device}')
             o_t = o_t.to(self.psi_1.device)
-            tmp_t = torch.gather(o_t.view(B, N_t, R_out), -2, idx)
+            tmp_t = torch.gather(o_t.view(B, N_t, R_out-1), -2, idx)
 #             show_memory(device_3, msg='BEFORE D')
 #             print(f'SHAPES: o_s: {o_s.shape}, tmp_t: {tmp_t.view(B, N_s, k, R_out).shape}')
             
             
-#             D = self.manifold.mobius_add(-o_s.to(device_3), tmp_t.view(B, N_s, k, R_out).to(device_3), c=self.c)
             
-            a1 = self.manifold.logmap0(o_s.to(device_3), self.c)
-            a2 = self.manifold.logmap0(tmp_t.view(B, N_s, k, R_out).to(device_3), c=self.c)
+
             
-            D = a1 - a2
+            D = self.manifold.poincare_mobius_coadd(-o_s.to(self.psi_1.device), tmp_t.view(B, N_s, k, R_out-1).to(self.psi_1.device), c=self.c)
+            
+            D = self.manifold.to_hyperboloid(D, c=self.c)
+            
 #             show_memory(device_3, msg='AFTER D')
-            S_hat = S_hat.to(device_3) + self.mlp(D).squeeze(-1).to(device_3)
+            S_hat = S_hat.to(self.psi_1.device) + self.mlp(D)[..., 1].squeeze(-1).to(self.psi_1.device) / 5
 
         S_L = S_hat.softmax(dim=-1)[s_mask]
         S_idx = S_idx[s_mask]

@@ -337,10 +337,11 @@ class MyHyperbolicGraphConvolution(MessagePassing):
             print(f'inputs shape: {inputs.shape}, x shape: {x.shape}')
 
         out = self.manifold.expmap(inputs, x, self.c, self.verbose)
-
+        out = self.manifold.proj(out, c=self.c)
         out = self.manifold.to_poincare(out, self.c, self.verbose)
         out = F.relu(out)
         out = self.manifold.to_hyperboloid(out, self.c, self.verbose)
+        out = self.manifold.proj(out, c=self.c)
         if self.verbose:
             print('++++++++++++++++++++++UPDATE++++++++++++++++++++++++++')
                         
@@ -349,9 +350,11 @@ class MyHyperbolicGraphConvolution(MessagePassing):
     def forward(self, x, edge_index):
         drop_weight = self.dropout(self.weight)
         x = self.manifold.mobius_matvec(drop_weight, x, self.c, self.verbose)
+        x = self.manifold.proj(x, c=self.c)
         if self.bias is not None:
             hyp_bias = self.manifold.expmap0(self.bias.view(1, -1), self.c)
             x = self.manifold.mobius_add(x, hyp_bias, self.c)
+            x = self.manifold.proj(x, c=self.c)
             
         return self.propagate(edge_index, x=x)
     

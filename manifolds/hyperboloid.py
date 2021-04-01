@@ -185,6 +185,14 @@ class Hyperboloid():
         u = self.logmap0(y, c)
         v = self.ptransp0(x, u, c)
         return self.expmap(v, x, c)
+    
+    def poincare_mobius_coadd(self, x, y, c, dim=-1):
+        x2 = x.pow(2).sum(dim=dim, keepdim=True)
+        y2 = y.pow(2).sum(dim=dim, keepdim=True)
+        num = (1 + c * y2) * x + (1 + c * x2) * y
+        denom = 1 - c ** 2 * x2 * y2
+        return num / denom.clamp_min(self.min_norm)
+    
 
     def mobius_matvec(self, m, x, c, desc=None, verbose=False):   
         if verbose:

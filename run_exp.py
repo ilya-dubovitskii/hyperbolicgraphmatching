@@ -31,8 +31,8 @@ class SumEmbedding(object):
 def train():
     model.train()
     optimizer.zero_grad()
-    _, S_L = model(data.x1, data.edge_index1, None, None, data.x2,
-                   data.edge_index2, None, None, train_y)
+    _, S_L = model(data.x1, data.edge_index1, None, data.x2,
+                   data.edge_index2, None, None, y=train_y)
 
     loss = model.loss(S_L, train_y)
     hits1 = model.acc(S_L, train_y)
@@ -49,7 +49,7 @@ def train():
 def test():
     model.eval()
 
-    _, S_L = model(data.x1, data.edge_index1, None, None, data.x2,
+    _, S_L = model(data.x1, data.edge_index1, None, data.x2,
                    data.edge_index2, None, None)
 
     loss = model.loss(S_L, test_y)
@@ -63,74 +63,83 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 path = osp.join('..', 'data', 'DBP15K')
 
-results_dict = {'hits1': {}, 'hits10': {}}
+results_dict = {'hits1b': {}, 'hits10b': {}, 'hits1a': {}, 'hits10a': {}}
 
-for concat in ['hyp1', 'hyp2']:
-    for category in ['fr_en', 'en_fr', 'zh_en', 'en_zh', 'en_ja', 'ja_en']:
-        print(f'======================={category}=======================')
-        data = DBP15K(path, category, transform=SumEmbedding())[0].to(device)
+args.dim=100
+args.rnd_dim=25
+args.num_layers=1
+args.num_steps=10
+args.k=5
 
-        data.x1 = data.x1[..., :100] / 30 
-        data.x2 = data.x2[..., :100] / 30
+for category in ['fr_en', 'en_fr', 'zh_en', 'en_zh', 'en_ja', 'ja_en']:
+    print(f'======================={category}=======================')
+    data = DBP15K(path, category, transform=SumEmbedding())[0].to(device)
 
-        psi_1 = HyperbolicRelCNN(Hyperboloid(), data.x1.shape[-1], args.dim, 1, args.num_layers, 
-                       cat=concat, lin=True, dropout=0.5, use_bias=True, use_att=False)
+    data.x1 = data.x1 / 30 
+    data.x2 = data.x2 / 30
 
-        psi_2 = HyperbolicRelCNN(Hyperboloid(), args.rnd_dim, args.rnd_dim, 1, 
-                                 args.num_layers, cat=concat, lin=False, dropout=0.0, use_bias=True, use_att=False)
-        
-        model = HDGMC(psi_1, psi_2, num_steps=None, k=args.k).to(device)
+    psi_1 = HyperbolicRelCNN(Hyperboloid(), data.x1.shape[-1], args.dim, 1, args.num_layers, 
+                   cat='hyp1', lin=True, dropout=0.5, use_bias=True, use_att=False)
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
+    psi_2 = HyperbolicRelCNN(Hyperboloid(), args.rnd_dim, args.rnd_dim, 1, 
+                         args.num_layers, cat='hyp1', lin=False, dropout=0.0, use_bias=True, use_att=False)
 
-        hyp = Hyperboloid()
+    model = HDGMC(psi_1, psi_2, num_steps=None, k=args.k).to(device)
 
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
 
-        h_s = data.x1
-        h_t = data.x2
-
-        h_s = hyp.proj_tan0(h_s, c=1)
-        h_s = hyp.expmap0(h_s, c=1)
-        h_s = hyp.proj(h_s, c=1)
-
-        h_t = hyp.proj_tan0(h_t, c=1)
-        h_t = hyp.expmap0(h_t, c=1)
-        h_t = hyp.proj(h_t, c=1)
-
-        data.x1 = h_s
-        data.x2 = h_t
-
-        train_y = data.train_y
-        test_y = data.test_y
+    hyp = Hyperboloid()
 
 
-        print('Optimize initial feature matching...')
-        best_hits1 = 0
-        best_hits10 = 0
-        model.num_steps = 0
-        for epoch in range(40):
-            if epoch == 20:
-                print('Refine correspondence matrix...')
-                model.num_steps = args.num_steps
-                model.detach = True
+    h_s = data.x1
+    h_t = data.x2
 
-            loss, hits1, hits10 = train()
-        #     print((f'{epoch:03d}: Loss: {loss:.4f}, Hits@1: {hits1:.4f}, '
-        #                f'Hits@10: {hits10:.4f}'))
+    h_s = hyp.proj_tan0(h_s, c=1)
+    h_s = hyp.expmap0(h_s, c=1)
+    h_s = hyp.proj(h_s, c=1)
+
+    h_t = hyp.proj_tan0(h_t, c=1)
+    h_t = hyp.expmap0(h_t, c=1)
+    h_t = hyp.proj(h_t, c=1)
+
+    data.x1 = h_s
+    data.x2 = h_t
+
+    train_y = data.train_y
+    test_y = data.test_y
 
 
-            if epoch % 1 == 0 or epoch == 50 or epoch == 100:
-                loss, hits1, hits10 = test()
-                if hits1 >= best_hits1:
-                    best_hits1 = hits1
-                    best_hits10 = hits10
+    print('Optimize initial feature matching...')
+    best_hits1 = 0
+    best_hits10 = 0
+    model.num_steps = 0
+    for epoch in range(100):
+        if epoch == 50:
+            print('Refine correspondence matrix...')
+            model.num_steps = args.num_steps
+            model.detach = True
+            results_dict['hits1b'][category] = np.round(best_hits1, 3)
+            results_dict['hits10b'][category] = np.round(best_hits10, 3)
+            best_hits1 = 0
+            best_hits10 = 0
+            
+        loss, hits1, hits10 = train()
+    #     print((f'{epoch:03d}: Loss: {loss:.4f}, Hits@1: {hits1:.4f}, '
+    #                f'Hits@10: {hits10:.4f}'))
 
-                print((f'{epoch:03d}: Loss: {loss:.4f}, Hits@1: {hits1:.4f}, '
-                       f'Hits@10: {hits10:.4f}'))
 
-        results_dict['hits1'][category] = np.round(best_hits1, 3)
-        results_dict['hits10'][category] = np.round(best_hits10, 3)
+        if epoch % 1 == 0 or epoch == 50 or epoch == 100:
+            loss, hits1, hits10 = test()
+            if hits1 >= best_hits1:
+                best_hits1 = hits1
+                best_hits10 = hits10
 
-    
-    with open(f'results_dict_{concat}.json', 'w') as fp:
-        json.dump(results_dict, fp)
+            print((f'{epoch:03d}: Loss: {loss:.4f}, Hits@1: {hits1:.4f}, '
+                   f'Hits@10: {hits10:.4f}'))
+
+    results_dict['hits1a'][category] = np.round(best_hits1, 3)
+    results_dict['hits10a'][category] = np.round(best_hits10, 3)
+
+
+with open(f'results_dict_new.json', 'w') as fp:
+    json.dump(results_dict, fp)

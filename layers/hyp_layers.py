@@ -186,99 +186,6 @@ class HypReLU(Module):
         
         return x
 
-class MyHyperbolicGraphConvolution1(MessagePassing):
-    def __init__(self, manifold, in_channels, out_channels, c, dropout=0, use_att=False, use_bias=False, verbose=False):
-        super().__init__(aggr='add')
-        print(f'in: {in_channels}, out: {out_channels}, c: {c}, dropout: {dropout}, att: {use_att}, bias: {use_bias}')
-        self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
-        self.bias = nn.Parameter(torch.Tensor(out_channels)) if use_bias else None
-        self.att = nn.Linear(2 * out_channels, 1) if use_att else None
-        self.dropout = nn.Dropout(p=dropout)
-        self.manifold = manifold
-        self.c = c
-        self.verbose = verbose
-        self.reset_parameters()
-    
-    def set_verbose(self, verbose):
-        self.verbose = verbose
-        
-    def reset_parameters(self):
-        init.xavier_uniform_(self.weight, gain=1)
-        if self.bias is not None:
-            init.constant_(self.bias, 0)
-    
-    def message(self, x_j):
-        if self.verbose:
-            print('--------------------MESSAGE--------------------------')
-            print(f'x_j shape: {x_j.shape}')
-        drop_weight = self.dropout(self.weight)
-        out = self.manifold.mobius_matvec(drop_weight, x_j, self.c, self.verbose)
-        if self.bias is not None:
-            hyp_bias = self.manifold.expmap0(self.bias.view(1, -1), self.c)
-            out = self.manifold.mobius_add(out, hyp_bias, self.c)
-        if self.verbose:
-            print('++++++++++++++++++++MESSAGE++++++++++++++++++++++++++')
-        
-        return out
-    
-    def aggregate(self, x_i, x_j, index, ptr=None, dim_size=None):
-        if ptr is not None:
-            ptr = expand_left(ptr, dim=self.node_dim, dims=inputs.dim())
-            return segment_csr(inputs, ptr, reduce=self.aggr)
-        else:
-            if self.verbose:
-                print('--------------------AGGREGATE--------------------------')
-                print(f'x_i shape: {x_i.shape}, x_j shape: {x_j.shape}')
-            att_scores = torch.ones(*x_j.shape[:-1], 1).to(x_j.device)
-                
-            x_j = self.manifold.mobius_matvec(self.weight, x_j, self.c, self.verbose)
-            if self.att is not None:
-                x_i0 = self.manifold.logmap0(x_i, c=self.c)
-                x_j0 = self.manifold.logmap0(x_j, c=self.c)
-                att_scores = self.att(torch.cat([x_i0, x_j0], dim=-1))
-                att_scores = torch.sigmoid(att_scores).reshape(-1, 1)
-            x_j = self.manifold.logmap(x_j, x_i, self.c, self.verbose)
-            x_j = x_j * att_scores
-            if self.verbose:
-                print('++++++++++++++++++++AGGREGATE++++++++++++++++++++++++++')
-            return scatter(x_j, index, dim=self.node_dim, dim_size=dim_size,
-                           reduce=self.aggr)
-        
-    def update(self, x_j, x):
-        if self.verbose:
-            print('----------------------UPDATE-------------------------')
-            print(f'x shape: {x.shape}, x_j shape: {x_j.shape}')
-        x = self.manifold.mobius_matvec(self.weight, x, self.c, self.verbose)
-
-        x = self.manifold.expmap(x_j, x, self.c, self.verbose)
-
-        x = self.manifold.to_poincare(x, self.c, self.verbose)
-        x = F.relu(x)
-        x = self.manifold.to_hyperboloid(x, self.c, self.verbose)
-        if self.verbose:
-            print('++++++++++++++++++++++UPDATE++++++++++++++++++++++++++')
-                        
-        return x
-    
-    def propagate(self, edge_index, size=None, **kwargs):
-        size = self.__check_input__(edge_index, size)
-        coll_dict = self.__collect__(self.__user_args__, edge_index, size,
-                                         kwargs)
-
-        msg_kwargs = self.inspector.distribute('message', coll_dict)
-        out = self.message(**msg_kwargs)
-
-        aggr_kwargs = self.inspector.distribute('aggregate', coll_dict)
-        out = self.aggregate(out, **aggr_kwargs)
-
-        update_kwargs = self.inspector.distribute('update', coll_dict)
-        out = self.update(out, **update_kwargs)
-        
-        return out
-    
-        
-    def forward(self, x, edge_index):
-        return self.propagate(edge_index, x=x)
     
     
     
@@ -286,7 +193,7 @@ class MyHyperbolicGraphConvolution1(MessagePassing):
 class MyHyperbolicGraphConvolution(MessagePassing):
     def __init__(self, manifold, in_channels, out_channels, c, dropout=0, use_att=False, use_bias=False, verbose=False):
         super().__init__(aggr='add')
-        print(f'in: {in_channels}, out: {out_channels}, c: {c}, dropout: {dropout}, att: {use_att}, bias: {use_bias}')
+#         print(f'in: {in_channels}, out: {out_channels}, c: {c}, dropout: {dropout}, att: {use_att}, bias: {use_bias}')
         self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
         self.bias = nn.Parameter(torch.Tensor(out_channels)) if use_bias else None
         self.att = nn.Linear(2 * out_channels, 1) if use_att else None

@@ -7,7 +7,7 @@ from torch_geometric.datasets import DBP15K
 from matplotlib import pyplot as plt
 
 from manifolds.hyperboloid import Hyperboloid
-from hdgmc.hdgmc import RelCNN, HyperbolicRelCNN, HDGMC, HDGMC_ver1
+from matching.hdgmc_backup import RelCNN, HyperbolicRelCNN, HDGMC, HDGMC_ver1
 from models.encoders import MyHGCN
 
 from torch_geometric.data import Data, DataLoader
@@ -129,8 +129,8 @@ loss_history_test, hits1_history_test, hits10_history_test = [], [], []
 
 print('Optimize initial feature matching...')
 model.num_steps = 0
-for epoch in range(100):
-    if epoch == 50:
+for epoch in range(200):
+    if epoch == 500:
         print('Refine correspondence matrix...')
         model.num_steps = args.num_steps
 #         model.detach = True

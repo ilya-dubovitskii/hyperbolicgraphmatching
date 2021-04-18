@@ -21,7 +21,7 @@ class GridSampler:
             lin = np.random.choice(parameter_ranges['lin'])
             dropout = np.random.choice(parameter_ranges['dropout'])
             sim = np.random.choice(parameter_ranges['sim'])
-            k = np.random.choice(parameter_ranges['k'])
+            k = int(np.random.choice(parameter_ranges['k']))
             lr = np.random.choice(parameter_ranges['lr'])
             gamma = np.random.choice(parameter_ranges['gamma'])
             max_epochs = np.random.choice(parameter_ranges['max_epochs'])

@@ -1,22 +1,22 @@
-import os
-import pickle as pkl, numpy as np
+import os, json
+import numpy as np
 from sklearn.model_selection import KFold
 
 from HoldOutSelection import HoldOutSelector
 from experiment import Experiment
 
 class KFoldAssessment:
-    def __init__(self, num_folds, exp_path, parameter_ranges, num_configs=100):
+    def __init__(self, num_folds, exp_path, model_selector, invert_folds=True):
         self.num_folds = num_folds
+        self.invert_folds = invert_folds
         self.kf = KFold(num_folds)
-        self.model_selector = HoldOutSelector(num_configs=num_configs)
-        self.parameter_ranges = parameter_ranges
+        self.model_selector = model_selector
         self.exp_path = exp_path
         self._BASE_FOLDER = os.path.join(exp_path, str(self.num_folds) + '_CV')
         self._FOLD_BASE = 'FOLD_'
-        self._RESULTS_FILENAME = 'winner_results.pkl'
-        self._CONFIG_FILENAME = 'winner_config.pkl'
-        self._ASSESSMENT_FILENAME = 'assessment_results.pkl'
+        self._RESULTS_FILENAME = 'winner_results.json'
+        self._CONFIG_FILENAME = 'winner_config.json'
+        self._ASSESSMENT_FILENAME = 'assessment_results.json'
         
     def process_results(self):
         TR_hits1 = []
@@ -31,7 +31,7 @@ class KFoldAssessment:
                                                self._RESULTS_FILENAME)
 
                 with open(results_filename, 'rb') as fp:
-                    fold_scores = pkl.load(fp)
+                    fold_scores = json.load(fp)
 
                     TR_hits1.append(fold_scores['TR_hits1'])
                     TS_hits1.append(fold_scores['TS_hits1'])
@@ -55,8 +55,8 @@ class KFoldAssessment:
         assessment_results['avg_TS_hits10'] = TS_hits10.mean()
         assessment_results['std_TS_hits10'] = TS_hits10.std()
 
-        with open(os.path.join(self._BASE_FOLDER, self._ASSESSMENT_FILENAME), 'wb') as fp:
-            pkl.dump(assessment_results, fp)
+        with open(os.path.join(self._BASE_FOLDER, self._ASSESSMENT_FILENAME), 'w') as fp:
+            json.dump(assessment_results, fp)
         print(f'Assessment for experiment {self._BASE_FOLDER} has ended\nResults:\n{assessment_results}')
         
         return assessment_results
@@ -67,6 +67,8 @@ class KFoldAssessment:
             os.makedirs(self._BASE_FOLDER)
         
         for k, (tr_idx, ts_idx) in enumerate(self.kf.split(dataset.y.T)):
+            if self.invert_folds:
+                tr_idx, ts_idx = ts_idx, tr_idx
             fold_dir = os.path.join(self._BASE_FOLDER, self._FOLD_BASE+str(k+1))
             if not os.path.exists(fold_dir):
                 os.makedirs(fold_dir)
@@ -84,7 +86,7 @@ class KFoldAssessment:
         return assessment_results
         
     def _risk_assessment_helper(self, dataset, tr_idx, ts_idx, fold_dir, device):
-        winner_config = self.model_selector.model_selection(dataset, tr_idx, self.parameter_ranges, fold_dir, device)
+        winner_config = self.model_selector.model_selection(dataset, tr_idx, fold_dir, device)
         exp = Experiment() #some path
         tr_hits1, ts_hits1, tr_hits10, ts_hits10 = [], [], [], []
         
@@ -106,8 +108,7 @@ class KFoldAssessment:
         results_dict = {'TR_hits1': tr_hits1, 'TS_hits1': ts_hits1,
                         'TR_hits10': tr_hits10, 'TS_hits10': ts_hits10}
         
-        with open(os.path.join(fold_dir, self._RESULTS_FILENAME), 'wb') as fp:
-            pkl.dump(results_dict, fp)
-        with open(os.path.join(fold_dir, self._CONFIG_FILENAME), 'wb') as fp:
-            pkl.dump(winner_config, fp)
+        with open(os.path.join(fold_dir, self._RESULTS_FILENAME), 'w') as fp:
+            json.dump(results_dict, fp)
+        winner_config.save(os.path.join(fold_dir, self._CONFIG_FILENAME))
     

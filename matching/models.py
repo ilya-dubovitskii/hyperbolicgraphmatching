@@ -232,8 +232,8 @@ class HyperbolicGraphMatching(torch.nn.Module):
             idx = torch.stack([row.view(-1), S_idx.view(-1)], dim=0)
             size = torch.Size([x_s.size(0), N_t])
 
-            S_sparse_0 = torch.sparse_coo_tensor(
-                idx, S_0.view(-1), size, requires_grad=S_0.requires_grad)
+            S_sparse_0 = torch.sparse_coo_tensor(idx, S_0.view(-1).cuda(0),
+                                                 size, requires_grad=S_0.requires_grad).to(idx.device)
             S_sparse_0.__idx__ = S_idx
             S_sparse_0.__val__ = S_0
 
@@ -452,7 +452,7 @@ class EuclideanGraphMatching(torch.nn.Module):
             size = torch.Size([x_s.size(0), N_t])
 
             S_sparse_0 = torch.sparse_coo_tensor(
-                idx, S_0.view(-1), size, requires_grad=S_0.requires_grad)
+                idx, S_0.view(-1).cuda(0), size, requires_grad=S_0.requires_grad).to(idx.device)
             S_sparse_0.__idx__ = S_idx
             S_sparse_0.__val__ = S_0
 

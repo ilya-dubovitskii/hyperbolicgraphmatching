@@ -32,7 +32,7 @@ class SumEmbedding(object):
         return data
 
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
 path = osp.join('..', 'data', 'DBP15K')
 data = DBP15K(path, args.category, transform=SumEmbedding())[0].to(device)
 
@@ -53,7 +53,7 @@ data.x1 = h_s
 data.x2 = h_t
 
 psi_1 = HyperbolicRelCNN(Hyperboloid(), data.x1.size(-1), out_channels, c, num_layers, 
-               cat=cat, lin=lin, dropout=0.5)
+               cat=cat, lin=lin, dropout=0.5).to(device)
 
 model = HyperbolicGraphMatching(psi_1, k=k, sim=sim).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)

@@ -8,7 +8,7 @@ from manifolds.hyperboloid import Hyperboloid
 from patience import Patience
 
 _supported_manifold_list = ['Euclidean', 'Hyperbolic']
-
+_c_to_norm = {0.5: 3.5, 1: 5.5, 2: 7, 4: 9}
 
 
 class ModelWrapper:
@@ -42,9 +42,8 @@ class ModelWrapper:
                                   self.num_layers, cat=self.cat, lin=self.lin, dropout=self.dropout).to(device)
             model = HyperbolicGraphMatching(psi, k=self.k, sim=self.sim).to(device)
             
-            manifold = Hyperboloid()
-
-            h_s, h_t = dataset.x_s / 15, dataset.x_t / 15
+            norm = _c_to_norm[self.c]
+            h_s, h_t = dataset.x_s / norm, dataset.x_t / norm
 
             h_s = manifold.proj_tan0(h_s, c=self.c)
             h_s = manifold.expmap0(h_s, c=self.c)
@@ -54,11 +53,19 @@ class ModelWrapper:
             h_t = manifold.expmap0(h_t, c=self.c)
             h_t = manifold.proj(h_t, c=self.c)
             
+            norm_s = manifold.minkowski_dot(h_s, h_s).squeeze()
+            norm_t = manifold.minkowski_dot(h_t, h_t).squeeze()
+            
+            mask_s = (norm_s < -1.1/self.c) | (norm_s > -0.9/self.c)
+            mask_t = (norm_t < -1.1/self.c) | (norm_t > -0.9/self.c)
+            
+            h_s[mask_s] = manifold.expmap0(dataset.x_s[mask_s]/(2*norm**2), c=self.c)
+            h_t[mask_t] = manifold.expmap0(dataset.x_t[mask_t]/(2*norm**2), c=self.c)
+            
         else:
             raise ValueError(f'Wrong manifold! Expected one of: {_supported_manifold_list}')
             
         dataset.to(device)
-        print(model)
         
         optimizer = Adam(model.parameters(), lr=self.lr)
         scheduler = StepLR(optimizer, step_size=20, gamma=self.gamma)
@@ -67,19 +74,6 @@ class ModelWrapper:
         y_train = dataset.y[:, tr_idx]
         y_test = dataset.y[:, val_idx]
         
-#         hyp = manifold
-#         norm_s = hyp.minkowski_dot(h_s, h_s)
-#         valid_s = ((norm_s > -1.1/self.c) & (norm_s < -0.9/self.c)).sum()
-#         valid_s = valid_s.float() / h_s.shape[-2] 
-
-#         norm_t = hyp.minkowski_dot(h_t, h_t)
-#         valid_t = ((norm_t > -1.1/self.c) & (norm_t < -0.9/self.c)).sum()
-#         valid_t = valid_t.float() / h_t.shape[-2] 
-
-#         print('AT THE START')
-#         print(f'on hyperboloid: {valid_s:.02f}, {valid_t:.02f} c = {self.c}')
-#         print(f'norms: {norm_s.mean().cpu().detach().numpy().round(2)}, {norm_t.mean().cpu().detach().numpy().round(2)}')
-#         print(f'dropout: {self.dropout}')
         
         for i in range(self.max_epochs):
             model.train()

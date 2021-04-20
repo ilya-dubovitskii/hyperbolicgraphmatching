@@ -1,11 +1,34 @@
-import os
-import numpy as np, pickle as pkl
+import os, json
+import numpy as np
 
 from sklearn.model_selection import train_test_split
 
 from config import Config
 from experiment import Experiment
 
+
+class FullGrid:
+    def __init__(self, parameter_ranges):
+        self.parameter_ranges = parameter_ranges
+    
+    def generate_grid(self):
+        space = self.parameter_ranges['space'][0]
+        max_epochs = self.parameter_ranges['max_epochs'][0]
+        sim = self.parameter_ranges['sim'][0]
+        cat = self.parameter_ranges['cat'][0]
+        lin = self.parameter_ranges['lin'][0]
+        k = self.parameter_ranges['k'][0]
+        for c in self.parameter_ranges['c']:
+            for out_channels in self.parameter_ranges['out_channels']:
+                for num_layers in self.parameter_ranges['num_layers']:
+                    for dropout in self.parameter_ranges['dropout']:
+                        for lr in self.parameter_ranges['lr']:
+                            for gamma in self.parameter_ranges['gamma']:
+                                config = Config(space=space, c=c, out_channels=out_channels,
+                                            num_layers=num_layers, cat=cat, lin=lin, dropout=dropout,
+                                            sim=sim, k=k, lr=lr, gamma=gamma, max_epochs=max_epochs)
+                                
+                                yield config
 
 class GridSampler:
     def __init__(self):
@@ -38,11 +61,13 @@ class GridSampler:
         return config
 
 class HoldOutSelector:
-    def __init__(self, num_configs):
+    def __init__(self, parameter_ranges, full_search=True, num_configs=100):
+        self.parameter_ranges = parameter_ranges
         self.num_configs = num_configs
-        self._CONFIG_FILENAME = 'config.pkl'
-        self._RESULTS_FILENAME = 'results.pkl'
-        self.WINNER_CONFIG_FILENAME = 'winner_config.pkl'
+        self.full_search = full_search
+        self._CONFIG_FILENAME = 'config.json'
+        self._RESULTS_FILENAME = 'results.json'
+        self.WINNER_CONFIG_FILENAME = 'winner_config.json'
         self._FOLD_BASE = None    # to be specified in :meth: model_selection
         
     def process_results(self):
@@ -52,8 +77,8 @@ class HoldOutSelector:
             try:
                 results_filename = os.path.join(self._FOLD_BASE, str(i+1), self._RESULTS_FILENAME)
                 config_filename = os.path.join(self._FOLD_BASE, str(i+1), self._CONFIG_FILENAME)
-                with open(results_filename, 'rb') as fp:
-                    results_dict = pkl.load(fp)
+                with open(results_filename, 'r') as fp:
+                    results_dict = json.load(fp)
                 vl_hits1 = results_dict['VL_hits1']
                 if vl_hits1 is None:
                     continue
@@ -61,26 +86,45 @@ class HoldOutSelector:
                     best_i = i+1
                     best_vl_hits1 = vl_hits1
                     with open(config_filename, 'rb') as fp:
-                        winner_config = pkl.load(fp)
+                        winner_config_dict = json.load(fp)
+                        winner_config = Config.load(winner_config_dict)
+                        
             except Exception as e:
                 print(e)
 
-        print(f'Model selection winner for experiment {self._FOLD_BASE}: {best_i} with hits1 {best_vl_hits1:.03f}')
+        print(f'Model selection winner for experiment {self._FOLD_BASE}: config #{best_i} with hits1 {best_vl_hits1:.03f}')
         
         return winner_config
             
     
-    def model_selection(self, dataset, idx, parameter_ranges, fold_dir, device, num_configs=100):
+    def model_selection(self, dataset, idx, fold_dir, device='cuda', num_configs=100):
         self._FOLD_BASE = fold_dir
-        grid_sampler = GridSampler()
+#         print(f'THIS IS THE FOLD DIR !!! {fold_dir}')
         tr_idx, vl_idx = train_test_split(idx, test_size=0.2)
-        for i in range(self.num_configs):
-            config_folder = os.path.join(fold_dir, str(i+1))
-            if not os.path.exists(config_folder):
-                os.makedirs(config_folder)
-            config = grid_sampler.sample(parameter_ranges)
-            self._model_selection_helper(dataset, tr_idx, vl_idx, config, config_folder, device)
-            print(f'{i}\n{config}')
+        if self.full_search:
+            grid_generator = FullGrid(self.parameter_ranges)
+            i = 0
+            for config in grid_generator.generate_grid():
+                config_folder = os.path.join(fold_dir, str(i+1))
+                if not os.path.exists(config_folder):
+                    os.makedirs(config_folder)
+                    
+                if not os.path.exists(os.path.join(config_folder, self._CONFIG_FILENAME)):
+                    self._model_selection_helper(dataset, tr_idx, vl_idx, config, config_folder, device)
+                    print(f'Config #{i+1} done')
+                else:
+                    print(f'Config {i+1} was already processed!')
+                i += 1
+            self.num_configs = i
+        else:
+            grid_sampler = GridSampler()
+            for i in range(self.num_configs):
+                config_folder = os.path.join(fold_dir, str(i+1))
+                if not os.path.exists(config_folder):
+                    os.makedirs(config_folder)
+                config = grid_sampler.sample(self.parameter_ranges)
+                self._model_selection_helper(dataset, tr_idx, vl_idx, config, config_folder, device)
+                print(f'Config #{i+1} done')
             
         winner_config = self.process_results()
         
@@ -97,9 +141,13 @@ class HoldOutSelector:
         results_dict['TR_hits10'] = tr_h10
         results_dict['VL_hits10'] = vl_h10
         print(f'@1: {vl_h1}', end=' ')
-        with open(os.path.join(config_folder, self._RESULTS_FILENAME), 'wb') as fp:
-            pkl.dump(results_dict, fp)
-        with open(os.path.join(config_folder, self._CONFIG_FILENAME), 'wb') as fp:
-            pkl.dump(config, fp)
+        with open(os.path.join(config_folder, self._RESULTS_FILENAME), 'w') as fp:
+            try:
+                json.dump(results_dict, fp)
+            except Exception as e:
+                print(results_dict, '\n', e)
+#         print(f'{config_folder} THIS IS THE CONFIG FOLDER !!!!!!!!!!!!')
+        config.save(os.path.join(config_folder, self._CONFIG_FILENAME))
+
         
         

@@ -16,7 +16,6 @@ from layers.hyp_layers import MyHyperbolicGraphConvolution, HypLinear, HypReLU
 from layers.rel import RelConv
 
 import math
-from utils.math_utils import arcosh, cosh, sinh 
 
 
 
@@ -148,8 +147,7 @@ class HyperbolicGraphMatching(torch.nn.Module):
         
         if self.sim == 'sqdist':
             K = 1. / self.c
-            theta = torch.clamp(-S_ij / K, min=1.0 + 1e-15)
-            S_ij = -K * arcosh(theta) ** 2
+            S_ij = -K * torch.clamp(-S_ij / K, min=1.0 + 1e-15).acosh() ** 2
         
         return S_ij.topk(self.k, dim=2)[1]
 
@@ -190,8 +188,7 @@ class HyperbolicGraphMatching(torch.nn.Module):
             S_hat = (h_s @ h_t.transpose(-1, -2)) - 2 * torch.einsum('bi,bj->bij', (h_s[..., :, 0], h_t[..., :, 0]))
             if self.sim == 'sqdist':
                 K = 1. / self.c
-                theta = torch.clamp(-S_hat / K, min=1.0 + 1e-15)
-                S_hat = -K * arcosh(theta) ** 2
+                S_hat = -K * torch.clamp(-S_hat / K, min=1.0 + 1e-15).acosh() ** 2
                 
             S_mask = s_mask.view(B, N_s, 1) & t_mask.view(B, 1, N_t)
             S_0 = masked_softmax(S_hat, S_mask, dim=-1)[s_mask]
@@ -219,8 +216,7 @@ class HyperbolicGraphMatching(torch.nn.Module):
 
             if self.sim == 'sqdist':
                 K = 1. / self.c
-                theta = torch.clamp(-S_hat / K, min=1.0 + 1e-15)
-                S_hat = -K * arcosh(theta) ** 2
+                S_hat = -K * torch.clamp(-S_hat / K, min=1.0 + 1e-15).acosh() ** 2
 
             S_0 = S_hat.softmax(dim=-1)[s_mask]
 

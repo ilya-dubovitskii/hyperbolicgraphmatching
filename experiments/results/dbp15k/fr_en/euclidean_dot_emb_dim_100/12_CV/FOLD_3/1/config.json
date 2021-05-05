@@ -1,0 +1,1 @@
+{"space": "Euclidean", "c": null, "out_channels": 100, "num_layers": 1, "sim": "dot", "cat": true, "lin": true, "dropout": 0, "k": 10, "lr": 0.0009000000000000001, "gamma": 0.8, "max_epochs": 500}

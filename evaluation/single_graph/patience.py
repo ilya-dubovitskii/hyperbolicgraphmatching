@@ -4,7 +4,7 @@ class Patience:
     Implement common "patience" technique
     '''
 
-    def __init__(self, patience=20):
+    def __init__(self, patience=30):
         self.local_vl_optimum = -1
         self.patience = patience
         self.best_epoch = -1

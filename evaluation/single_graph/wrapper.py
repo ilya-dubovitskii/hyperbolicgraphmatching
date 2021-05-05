@@ -3,7 +3,7 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import StepLR
 
 from dgmc.models import RelCNN
-from matching.models import HyperbolicRelCNN, EuclideanGraphMatching, HyperbolicGraphMatching
+from matching.models import EuclideanGCN, HyperbolicGCN, EuclideanGraphMatching, HyperbolicGraphMatching
 from manifolds.hyperboloid import Hyperboloid
 from single_graph.patience import Patience
 
@@ -32,13 +32,13 @@ class ModelWrapper:
     def run(self, dataset, tr_idx, val_idx):
         device = self.device
         if self.space == 'Euclidean':
-            psi = RelCNN(self.input_dim, self.out_channels, self.num_layers,
-                         batch_norm=False, cat=self.cat, lin=self.lin, dropout=self.dropout).to(device)
+            psi = EuclideanGCN(self.input_dim, self.out_channels, self.num_layers,
+                         cat=self.cat, lin=self.lin, dropout=self.dropout).to(device)
             model = EuclideanGraphMatching(psi, k=self.k).to(device)
             h_s, h_t = dataset.x_s, dataset.x_t
         elif self.space == 'Hyperbolic':
             manifold = Hyperboloid()
-            psi = HyperbolicRelCNN(manifold, self.input_dim, self.out_channels, self.c,
+            psi = HyperbolicGCN(manifold, self.input_dim, self.out_channels, self.c,
                                   self.num_layers, cat=self.cat, lin=self.lin, dropout=self.dropout).to(device)
             model = HyperbolicGraphMatching(psi, k=self.k, sim=self.sim).to(device)
             
@@ -81,35 +81,33 @@ class ModelWrapper:
             S = model(h_s, dataset.edge_index_s, dataset.edge_attr_s, None, h_t,
                            dataset.edge_index_t, dataset.edge_attr_t, None, y=y_train)
             
-            # TODO: check for logging
             tr_loss = model.loss(S, y_train)
             tr_hits1 = model.acc(S, y_train)
             tr_hits10 = model.hits_at_k(10, S, y_train)
 
             tr_loss.backward()
             optimizer.step()
-#             print(f'epoch {i} tr loss {tr_loss} h1: {tr_hits1}')
             with torch.no_grad():
                 model.eval()
                 S = model(h_s, dataset.edge_index_s, dataset.edge_attr_s, None, h_t,
                            dataset.edge_index_t, dataset.edge_attr_t, None, y=None)
 
-                # TODO: check for logging
                 vl_loss = model.loss(S, y_test)
                 vl_hits1 = model.acc(S, y_test)
                 vl_hits10 = model.hits_at_k(10, S, y_test)
-
-#             print(f'\t val loss {vl_loss} h1: {vl_hits1}') 
+                
+                
             if torch.isnan(tr_loss) or torch.isnan(vl_loss):
-                print('nan loss encountered')
+                print('NAN LOSS')
                 tr_loss = torch.tensor([10000])
                 vl_loss = torch.tensor([10000])
                 break
             
             if early_stopper.stop(i, vl_loss, vl_hits1, vl_hits10, tr_loss, tr_hits1, tr_hits10):
                 break
-        print('val loss: ', vl_loss.item(), end=' ')
         tr_loss, tr_hits1, tr_hits10, vl_loss, vl_hits1, vl_hits10, best_epoch = early_stopper.get_best_vl_metrics()
-        print('best epoch: ', best_epoch)
+#         print(f'TRAINING FINISHED, BEST EPOCH: {best_epoch}\n\tTR: L {tr_loss:.03f}, H1 {tr_hits1:.03f};\n\tVL: L: {vl_loss:.03f} H1:{vl_hits1:.03f}')
+        
+        print(f'BEST EPOCH: {best_epoch}\n\tTR: L {tr_loss}, H1 {tr_hits1};\n\tVL: L: {vl_loss} H1:{vl_hits1}')
         
         return tr_loss, tr_hits1, tr_hits10, vl_loss, vl_hits1, vl_hits10

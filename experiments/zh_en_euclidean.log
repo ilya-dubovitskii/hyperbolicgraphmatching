@@ -1,637 +1,230 @@
-val loss:  1.273211121559143 best epoch:  37
-@1: 0.8781302170283807 Config #1 done
-val loss:  1.5010735988616943 best epoch:  31
-@1: 0.8497495826377296 Config #2 done
-val loss:  1.2539472579956055 best epoch:  54
-@1: 0.8898163606010017 Config #3 done
-val loss:  1.692739486694336 best epoch:  73
-@1: 0.9015025041736227 Config #4 done
-val loss:  1.2610108852386475 best epoch:  122
-@1: 0.9181969949916527 Config #5 done
-val loss:  1.5627728700637817 best epoch:  54
-@1: 0.8697829716193656 Config #6 done
-val loss:  1.3044384717941284 best epoch:  41
-@1: 0.8831385642737897 Config #7 done
-val loss:  1.4706922769546509 best epoch:  31
-@1: 0.8731218697829716 Config #8 done
-val loss:  1.137060523033142 best epoch:  78
-@1: 0.9031719532554258 Config #9 done
-val loss:  1.349445104598999 best epoch:  81
-@1: 0.9198664440734557 Config #10 done
-val loss:  1.2561804056167603 best epoch:  61
-@1: 0.8831385642737897 Config #11 done
-val loss:  1.459453821182251 best epoch:  103
-@1: 0.9131886477462438 Config #12 done
-val loss:  1.41924250125885 best epoch:  33
-@1: 0.8848080133555927 Config #13 done
-val loss:  1.6173702478408813 best epoch:  25
-@1: 0.8781302170283807 Config #14 done
-val loss:  1.1970566511154175 best epoch:  62
-@1: 0.9098497495826378 Config #15 done
-val loss:  1.4010875225067139 best epoch:  49
-@1: 0.9081803005008348 Config #16 done
-val loss:  1.3024325370788574 best epoch:  117
-@1: 0.8964941569282137 Config #17 done
-val loss:  1.4925373792648315 best epoch:  90
-@1: 0.9198664440734557 Config #18 done
-val loss:  1.2105149030685425 best epoch:  65
-@1: 0.9081803005008348 Config #19 done
-val loss:  2.3439650535583496 best epoch:  38
-@1: 0.8547579298831386 Config #20 done
-val loss:  1.151220679283142 best epoch:  56
-@1: 0.9265442404006677 Config #21 done
-val loss:  1.7386387586593628 best epoch:  76
-@1: 0.9131886477462438 Config #22 done
-val loss:  1.265161395072937 best epoch:  115
-@1: 0.9365609348914858 Config #23 done
-val loss:  1.607729434967041 best epoch:  75
-@1: 0.8981636060100167 Config #24 done
-val loss:  1.012978196144104 best epoch:  76
-@1: 0.9265442404006677 Config #25 done
-val loss:  2.0980584621429443 best epoch:  34
-@1: 0.8647746243739566 Config #26 done
-val loss:  1.1077795028686523 best epoch:  58
-@1: 0.9332220367278798 Config #27 done
-val loss:  1.7041229009628296 best epoch:  63
-@1: 0.9181969949916527 Config #28 done
-val loss:  1.2114125490188599 best epoch:  130
-@1: 0.9282136894824707 Config #29 done
-val loss:  1.601017951965332 best epoch:  107
-@1: 0.9282136894824707 Config #30 done
-val loss:  1.2493338584899902 best epoch:  47
-@1: 0.9248747913188647 Config #31 done
-nan loss encountered
-val loss:  10000 best epoch:  6
-@1: 0.00667779632721202 Config #32 done
-val loss:  1.074853777885437 best epoch:  78
-@1: 0.9549248747913188 Config #33 done
-val loss:  1.6968728303909302 best epoch:  101
-@1: 0.9282136894824707 Config #34 done
-val loss:  1.2130903005599976 best epoch:  178
-@1: 0.9532554257095158 Config #35 done
-val loss:  1.5438467264175415 best epoch:  87
-@1: 0.9181969949916527 Config #36 done
-PROCESSING RESULTS
-Model selection winner for experiment results/dbp15k/zh_en/euclidean_dot/16_CV/FOLD_1: config #33 with hits1 0.955
-val loss:  0.9498879909515381 best epoch:  71
-val loss:  0.9477866291999817 best epoch:  68
-val loss:  0.9625093936920166 best epoch:  71
-END OF FOLD.
-TR:	@1: 0.992 @10: 0.633         TS:	@1: 0.996 @10: 0.861
-val loss:  1.2484114170074463 best epoch:  59
-@1: 0.8964941569282137 Config #1 done
-val loss:  1.4066120386123657 best epoch:  35
-@1: 0.8931552587646077 Config #2 done
-val loss:  1.2931528091430664 best epoch:  34
-@1: 0.8881469115191987 Config #3 done
-val loss:  1.151889443397522 best epoch:  36
-@1: 0.9181969949916527 Config #4 done
-val loss:  1.1284778118133545 best epoch:  116
-@1: 0.9332220367278798 Config #5 done
-val loss:  1.2282673120498657 best epoch:  39
-@1: 0.8964941569282137 Config #6 done
-val loss:  1.0873754024505615 best epoch:  44
-@1: 0.9065108514190318 Config #7 done
-val loss:  1.3975001573562622 best epoch:  27
-@1: 0.8797996661101837 Config #8 done
-val loss:  1.1841117143630981 best epoch:  47
-@1: 0.9181969949916527 Config #9 done
-val loss:  1.1321289539337158 best epoch:  83
-@1: 0.9398998330550918 Config #10 done
-val loss:  1.1664825677871704 best epoch:  140
-@1: 0.9465776293823038 Config #11 done
-val loss:  1.2254018783569336 best epoch:  46
-@1: 0.9065108514190318 Config #12 done
-val loss:  1.2088370323181152 best epoch:  32
-@1: 0.9081803005008348 Config #13 done
-val loss:  1.3965914249420166 best epoch:  20
-@1: 0.8631051752921536 Config #14 done
-val loss:  1.201093316078186 best epoch:  69
-@1: 0.9365609348914858 Config #15 done
-val loss:  1.3039437532424927 best epoch:  64
-@1: 0.9215358931552587 Config #16 done
-val loss:  1.1256705522537231 best epoch:  104
-@1: 0.9165275459098498 Config #17 done
-val loss:  1.261831283569336 best epoch:  84
-@1: 0.9181969949916527 Config #18 done
-val loss:  1.2443464994430542 best epoch:  48
-@1: 0.9298831385642737 Config #19 done
-val loss:  1.8616361618041992 best epoch:  28
-@1: 0.8848080133555927 Config #20 done
-val loss:  1.0443873405456543 best epoch:  51
-@1: 0.9415692821368948 Config #21 done
-val loss:  1.4263434410095215 best epoch:  63
-@1: 0.9465776293823038 Config #22 done
-val loss:  1.1142537593841553 best epoch:  108
-@1: 0.9616026711185309 Config #23 done
-val loss:  1.8027018308639526 best epoch:  37
-@1: 0.9181969949916527 Config #24 done
-val loss:  1.035675048828125 best epoch:  30
-@1: 0.9382303839732888 Config #25 done
-val loss:  1.6583365201950073 best epoch:  46
-@1: 0.8914858096828047 Config #26 done
-val loss:  0.8583220839500427 best epoch:  98
-@1: 0.9699499165275459 Config #27 done
-val loss:  1.1747345924377441 best epoch:  74
-@1: 0.9432387312186978 Config #28 done
-val loss:  0.9947810769081116 best epoch:  119
-@1: 0.9582637729549248 Config #29 done
-val loss:  1.2356977462768555 best epoch:  74
-@1: 0.9181969949916527 Config #30 done
-val loss:  0.9558076858520508 best epoch:  39
-@1: 0.9465776293823038 Config #31 done
-val loss:  1.407282829284668 best epoch:  87
-@1: 0.9065108514190318 Config #32 done
-val loss:  0.9778535962104797 best epoch:  89
-@1: 0.9616026711185309 Config #33 done
-val loss:  1.193273663520813 best epoch:  107
-@1: 0.9432387312186978 Config #34 done
-val loss:  1.0582149028778076 best epoch:  106
-@1: 0.9632721202003339 Config #35 done
-val loss:  1.2570850849151611 best epoch:  155
-@1: 0.9465776293823038 Config #36 done
-PROCESSING RESULTS
-Model selection winner for experiment results/dbp15k/zh_en/euclidean_dot/16_CV/FOLD_3: config #27 with hits1 0.970
-val loss:  0.9580929279327393 best epoch:  45
-val loss:  0.9521333575248718 best epoch:  59
-val loss:  0.9438100457191467 best epoch:  78
-END OF FOLD.
-TR:	@1: 0.991 @10: 0.630         TS:	@1: 0.997 @10: 0.857
-val loss:  1.297906756401062 best epoch:  62
-@1: 0.7913188647746243 Config #1 done
-val loss:  1.4313867092132568 best epoch:  62
-@1: 0.7946577629382304 Config #2 done
-val loss:  1.1930484771728516 best epoch:  50
-@1: 0.7896494156928213 Config #3 done
-val loss:  1.2969027757644653 best epoch:  57
-@1: 0.8330550918196995 Config #4 done
-val loss:  1.2422617673873901 best epoch:  77
-@1: 0.8013355592654424 Config #5 done
-val loss:  1.4171380996704102 best epoch:  42
-@1: 0.8146911519198664 Config #6 done
-val loss:  1.2268325090408325 best epoch:  50
-@1: 0.8280467445742905 Config #7 done
-val loss:  1.5830156803131104 best epoch:  34
-@1: 0.7913188647746243 Config #8 done
-val loss:  1.2647600173950195 best epoch:  49
-@1: 0.8163606010016694 Config #9 done
-val loss:  1.3481488227844238 best epoch:  134
-@1: 0.8981636060100167 Config #10 done
-val loss:  1.3308398723602295 best epoch:  57
-@1: 0.8030050083472454 Config #11 done
-val loss:  1.3939783573150635 best epoch:  105
-@1: 0.8480801335559266 Config #12 done
-val loss:  1.38734769821167 best epoch:  36
-@1: 0.8347245409015025 Config #13 done
-val loss:  1.4631915092468262 best epoch:  23
-@1: 0.7746243739565943 Config #14 done
-val loss:  1.320896029472351 best epoch:  77
-@1: 0.8497495826377296 Config #15 done
-val loss:  1.3201521635055542 best epoch:  79
-@1: 0.8731218697829716 Config #16 done
-val loss:  1.404088020324707 best epoch:  53
-@1: 0.7779632721202003 Config #17 done
-val loss:  1.3601990938186646 best epoch:  73
-@1: 0.8447412353923205 Config #18 done
-val loss:  1.1719386577606201 best epoch:  76
-@1: 0.8597662771285476 Config #19 done
-val loss:  1.8154621124267578 best epoch:  35
-@1: 0.7679465776293823 Config #20 done
-val loss:  0.9985498189926147 best epoch:  68
-@1: 0.8631051752921536 Config #21 done
-val loss:  1.6746327877044678 best epoch:  101
-@1: 0.8697829716193656 Config #22 done
-val loss:  1.2884994745254517 best epoch:  43
-@1: 0.8196994991652755 Config #23 done
-val loss:  1.9041520357131958 best epoch:  34
-@1: 0.7829716193656093 Config #24 done
-val loss:  1.0951186418533325 best epoch:  45
-@1: 0.8631051752921536 Config #25 done
-val loss:  1.384974718093872 best epoch:  113
-@1: 0.8631051752921536 Config #26 done
-val loss:  1.1083980798721313 best epoch:  78
-@1: 0.8898163606010017 Config #27 done
-val loss:  1.4219605922698975 best epoch:  67
-@1: 0.8647746243739566 Config #28 done
-val loss:  1.1125693321228027 best epoch:  48
-@1: 0.8263772954924875 Config #29 done
-val loss:  1.5880732536315918 best epoch:  60
-@1: 0.8213689482470785 Config #30 done
-val loss:  1.0860363245010376 best epoch:  35
-@1: 0.8647746243739566 Config #31 done
-val loss:  1.5750657320022583 best epoch:  63
-@1: 0.7529215358931552 Config #32 done
-val loss:  1.1778119802474976 best epoch:  30
-@1: 0.8163606010016694 Config #33 done
-val loss:  1.315531849861145 best epoch:  100
-@1: 0.8597662771285476 Config #34 done
-val loss:  1.178787112236023 best epoch:  139
-@1: 0.8914858096828047 Config #35 done
-val loss:  1.4184540510177612 best epoch:  87
-@1: 0.7746243739565943 Config #36 done
-PROCESSING RESULTS
-Model selection winner for experiment results/dbp15k/zh_en/euclidean_dot/16_CV/FOLD_5: config #10 with hits1 0.898
-val loss:  1.1065967082977295 best epoch:  49
-val loss:  1.1142889261245728 best epoch:  50
-val loss:  1.114220380783081 best epoch:  48
-END OF FOLD.
-TR:	@1: 0.947 @10: 0.568         TS:	@1: 0.987 @10: 0.829
-val loss:  1.1282355785369873 best epoch:  42
-@1: 0.8230383973288815 Config #1 done
-val loss:  1.4121015071868896 best epoch:  39
-@1: 0.8447412353923205 Config #2 done
-val loss:  1.2301011085510254 best epoch:  61
-@1: 0.8530884808013356 Config #3 done
-val loss:  1.4373018741607666 best epoch:  26
-@1: 0.7896494156928213 Config #4 done
-val loss:  1.3571056127548218 best epoch:  111
-@1: 0.8714524207011686 Config #5 done
-val loss:  1.6812617778778076 best epoch:  38
-@1: 0.8146911519198664 Config #6 done
-val loss:  1.1528657674789429 best epoch:  35
-@1: 0.8213689482470785 Config #7 done
-val loss:  1.5486290454864502 best epoch:  44
-@1: 0.8313856427378965 Config #8 done
-val loss:  1.240340232849121 best epoch:  87
-@1: 0.8831385642737897 Config #9 done
-val loss:  1.3853355646133423 best epoch:  105
-@1: 0.8747913188647746 Config #10 done
-val loss:  1.2859649658203125 best epoch:  77
-@1: 0.8447412353923205 Config #11 done
-val loss:  1.4802813529968262 best epoch:  49
-@1: 0.8180300500834724 Config #12 done
-val loss:  1.3553706407546997 best epoch:  34
-@1: 0.8313856427378965 Config #13 done
-val loss:  1.6639633178710938 best epoch:  40
-@1: 0.8130217028380634 Config #14 done
-val loss:  1.2363027334213257 best epoch:  44
-@1: 0.8363939899833055 Config #15 done
-val loss:  1.2625031471252441 best epoch:  41
-@1: 0.8163606010016694 Config #16 done
-val loss:  1.514467716217041 best epoch:  44
-@1: 0.8163606010016694 Config #17 done
-val loss:  1.4414873123168945 best epoch:  66
-@1: 0.8247078464106845 Config #18 done
-val loss:  1.1862800121307373 best epoch:  75
-@1: 0.8747913188647746 Config #19 done
-val loss:  2.2163584232330322 best epoch:  24
-@1: 0.7963272120200334 Config #20 done
-val loss:  1.2025986909866333 best epoch:  91
-@1: 0.8998330550918197 Config #21 done
-val loss:  1.7501050233840942 best epoch:  83
-@1: 0.8864774624373957 Config #22 done
-val loss:  1.1061779260635376 best epoch:  161
-@1: 0.9048414023372288 Config #23 done
-val loss:  1.6792463064193726 best epoch:  34
-@1: 0.8063439065108514 Config #24 done
-val loss:  1.1316206455230713 best epoch:  42
-@1: 0.8497495826377296 Config #25 done
-val loss:  1.9063239097595215 best epoch:  55
-@1: 0.8363939899833055 Config #26 done
-val loss:  0.9529820680618286 best epoch:  99
-@1: 0.9131886477462438 Config #27 done
-val loss:  1.6590379476547241 best epoch:  98
-@1: 0.8664440734557596 Config #28 done
-val loss:  1.0859975814819336 best epoch:  103
-@1: 0.8881469115191987 Config #29 done
-val loss:  1.6407735347747803 best epoch:  120
-@1: 0.8797996661101837 Config #30 done
-val loss:  1.1083064079284668 best epoch:  30
-@1: 0.8430717863105175 Config #31 done
-val loss:  1.5702558755874634 best epoch:  83
-@1: 0.8580968280467446 Config #32 done
-val loss:  0.9904074668884277 best epoch:  55
-@1: 0.8881469115191987 Config #33 done
-val loss:  1.5049018859863281 best epoch:  85
-@1: 0.8631051752921536 Config #34 done
-val loss:  1.1281877756118774 best epoch:  82
-@1: 0.8514190317195326 Config #35 done
-val loss:  1.7194187641143799 best epoch:  150
-@1: 0.8681135225375626 Config #36 done
-PROCESSING RESULTS
-Model selection winner for experiment results/dbp15k/zh_en/euclidean_dot/16_CV/FOLD_7: config #27 with hits1 0.913
-val loss:  0.9270948767662048 best epoch:  50
-val loss:  0.940818190574646 best epoch:  47
-val loss:  0.9296168684959412 best epoch:  57
-END OF FOLD.
-TR:	@1: 0.971 @10: 0.646         TS:	@1: 0.997 @10: 0.874
-val loss:  1.2584309577941895 best epoch:  46
-@1: 0.7979966611018364 Config #1 done
-val loss:  1.6657154560089111 best epoch:  28
-@1: 0.7863105175292153 Config #2 done
-val loss:  1.0827022790908813 best epoch:  66
-@1: 0.8447412353923205 Config #3 done
-val loss:  1.4522640705108643 best epoch:  132
-@1: 0.8597662771285476 Config #4 done
-val loss:  1.1966772079467773 best epoch:  93
-@1: 0.8547579298831386 Config #5 done
-val loss:  1.1099251508712769 best epoch:  66
-@1: 0.8447412353923205 Config #6 done
-val loss:  1.2332584857940674 best epoch:  59
-@1: 0.8263772954924875 Config #7 done
-val loss:  1.4922856092453003 best epoch:  34
-@1: 0.7762938230383973 Config #8 done
-val loss:  1.0559254884719849 best epoch:  105
-@1: 0.8697829716193656 Config #9 done
-val loss:  1.2275828123092651 best epoch:  44
-@1: 0.8247078464106845 Config #10 done
-val loss:  1.1631346940994263 best epoch:  88
-@1: 0.8414023372287145 Config #11 done
-val loss:  1.288885235786438 best epoch:  99
-@1: 0.8347245409015025 Config #12 done
-val loss:  1.424965739250183 best epoch:  39
-@1: 0.8080133555926544 Config #13 done
-val loss:  1.4493087530136108 best epoch:  23
-@1: 0.7629382303839732 Config #14 done
-val loss:  1.2050124406814575 best epoch:  102
-@1: 0.8747913188647746 Config #15 done
-val loss:  1.5150363445281982 best epoch:  65
-@1: 0.8497495826377296 Config #16 done
-val loss:  1.0907953977584839 best epoch:  78
-@1: 0.8347245409015025 Config #17 done
-val loss:  1.2683758735656738 best epoch:  108
-@1: 0.8397328881469115 Config #18 done
-val loss:  1.1230523586273193 best epoch:  58
-@1: 0.8497495826377296 Config #19 done
-val loss:  1.7911614179611206 best epoch:  37
-@1: 0.8146911519198664 Config #20 done
-val loss:  0.9266312718391418 best epoch:  101
-@1: 0.8831385642737897 Config #21 done
-val loss:  1.749680519104004 best epoch:  80
-@1: 0.8530884808013356 Config #22 done
-val loss:  1.0176701545715332 best epoch:  76
-@1: 0.8731218697829716 Config #23 done
-val loss:  1.398008942604065 best epoch:  119
-@1: 0.8547579298831386 Config #24 done
-val loss:  1.1273173093795776 best epoch:  39
-@1: 0.8330550918196995 Config #25 done
-val loss:  1.7155877351760864 best epoch:  44
-@1: 0.8130217028380634 Config #26 done
-val loss:  0.9228585362434387 best epoch:  62
-@1: 0.8697829716193656 Config #27 done
-val loss:  1.229949712753296 best epoch:  57
-@1: 0.8447412353923205 Config #28 done
-val loss:  0.9396659731864929 best epoch:  59
-@1: 0.8514190317195326 Config #29 done
-val loss:  1.2602665424346924 best epoch:  67
-@1: 0.8247078464106845 Config #30 done
-val loss:  1.0500952005386353 best epoch:  30
-@1: 0.8297161936560935 Config #31 done
-nan loss encountered
-val loss:  10000 best epoch:  -1
-@1: None Config #32 done
-val loss:  1.0876573324203491 best epoch:  73
-@1: 0.8914858096828047 Config #33 done
-val loss:  1.2654829025268555 best epoch:  122
-@1: 0.8697829716193656 Config #34 done
-val loss:  1.130406379699707 best epoch:  30
-@1: 0.7712854757929883 Config #35 done
-val loss:  1.350998878479004 best epoch:  107
-@1: 0.8731218697829716 Config #36 done
-PROCESSING RESULTS
-Model selection winner for experiment results/dbp15k/zh_en/euclidean_dot/16_CV/FOLD_9: config #33 with hits1 0.891
-val loss:  0.9486376047134399 best epoch:  55
-val loss:  0.9563795924186707 best epoch:  57
-val loss:  0.9427010416984558 best epoch:  48
-END OF FOLD.
-TR:	@1: 0.964 @10: 0.650         TS:	@1: 0.987 @10: 0.878
-val loss:  1.2649304866790771 best epoch:  41
-@1: 0.7929883138564274 Config #1 done
-val loss:  1.6912705898284912 best epoch:  27
-@1: 0.7512520868113522 Config #2 done
-val loss:  1.3559554815292358 best epoch:  41
-@1: 0.7913188647746243 Config #3 done
-val loss:  1.3252744674682617 best epoch:  81
-@1: 0.8464106844741235 Config #4 done
-val loss:  1.1650683879852295 best epoch:  65
-@1: 0.8313856427378965 Config #5 done
-val loss:  1.3707338571548462 best epoch:  137
-@1: 0.8430717863105175 Config #6 done
-val loss:  1.25554621219635 best epoch:  47
-@1: 0.8080133555926544 Config #7 done
-val loss:  1.6732219457626343 best epoch:  24
-@1: 0.7829716193656093 Config #8 done
-val loss:  1.1200815439224243 best epoch:  93
-@1: 0.8647746243739566 Config #9 done
-val loss:  1.2287760972976685 best epoch:  69
-@1: 0.8530884808013356 Config #10 done
-val loss:  1.18492591381073 best epoch:  78
-@1: 0.8146911519198664 Config #11 done
-val loss:  1.256295919418335 best epoch:  82
-@1: 0.8347245409015025 Config #12 done
-val loss:  1.3521108627319336 best epoch:  29
-@1: 0.7863105175292153 Config #13 done
-val loss:  1.468537449836731 best epoch:  51
-@1: 0.8013355592654424 Config #14 done
-val loss:  1.1981792449951172 best epoch:  36
-@1: 0.7896494156928213 Config #15 done
-val loss:  1.228990912437439 best epoch:  60
-@1: 0.8363939899833055 Config #16 done
-val loss:  1.2209765911102295 best epoch:  109
-@1: 0.8280467445742905 Config #17 done
-val loss:  1.3222426176071167 best epoch:  143
-@1: 0.8497495826377296 Config #18 done
-val loss:  1.3819520473480225 best epoch:  77
-@1: 0.8530884808013356 Config #19 done
-val loss:  1.8379627466201782 best epoch:  52
-@1: 0.8180300500834724 Config #20 done
-val loss:  1.1352696418762207 best epoch:  83
-@1: 0.8831385642737897 Config #21 done
-val loss:  1.556574821472168 best epoch:  40
-@1: 0.8196994991652755 Config #22 done
-val loss:  1.13628089427948 best epoch:  135
-@1: 0.8831385642737897 Config #23 done
-val loss:  1.2065483331680298 best epoch:  55
-@1: 0.8430717863105175 Config #24 done
-val loss:  1.1853413581848145 best epoch:  26
-@1: 0.8380634390651085 Config #25 done
-val loss:  1.8255614042282104 best epoch:  57
-@1: 0.8330550918196995 Config #26 done
-val loss:  1.118449091911316 best epoch:  84
-@1: 0.8931552587646077 Config #27 done
-val loss:  1.38124680519104 best epoch:  65
-@1: 0.8363939899833055 Config #28 done
-val loss:  1.0510646104812622 best epoch:  40
-@1: 0.8180300500834724 Config #29 done
-val loss:  1.5520694255828857 best epoch:  139
-@1: 0.8714524207011686 Config #30 done
-val loss:  1.133882999420166 best epoch:  25
-@1: 0.8430717863105175 Config #31 done
-val loss:  1.7670730352401733 best epoch:  86
-@1: 0.7512520868113522 Config #32 done
-val loss:  1.118701696395874 best epoch:  67
-@1: 0.8764607679465777 Config #33 done
-val loss:  1.6966501474380493 best epoch:  93
-@1: 0.8430717863105175 Config #34 done
-val loss:  1.0477919578552246 best epoch:  104
-@1: 0.8714524207011686 Config #35 done
-val loss:  1.3571958541870117 best epoch:  204
-@1: 0.8597662771285476 Config #36 done
-PROCESSING RESULTS
-Model selection winner for experiment results/dbp15k/zh_en/euclidean_dot/16_CV/FOLD_11: config #27 with hits1 0.893
-val loss:  0.9317902326583862 best epoch:  66
-val loss:  0.9319393038749695 best epoch:  71
-val loss:  0.9194562435150146 best epoch:  65
-END OF FOLD.
-TR:	@1: 0.979 @10: 0.648         TS:	@1: 0.993 @10: 0.879
-val loss:  1.199781060218811 best epoch:  55
-@1: 0.8130217028380634 Config #1 done
-val loss:  1.4917534589767456 best epoch:  24
-@1: 0.7612687813021702 Config #2 done
-val loss:  1.242261528968811 best epoch:  79
-@1: 0.8397328881469115 Config #3 done
-val loss:  1.428571105003357 best epoch:  38
-@1: 0.7913188647746243 Config #4 done
-val loss:  1.3220165967941284 best epoch:  65
-@1: 0.8096828046744574 Config #5 done
-val loss:  1.501726746559143 best epoch:  28
-@1: 0.7412353923205343 Config #6 done
-val loss:  1.3627798557281494 best epoch:  41
-@1: 0.8263772954924875 Config #7 done
-val loss:  1.582890510559082 best epoch:  21
-@1: 0.7445742904841403 Config #8 done
-val loss:  1.3325084447860718 best epoch:  57
-@1: 0.8280467445742905 Config #9 done
-val loss:  1.3346915245056152 best epoch:  30
-@1: 0.7629382303839732 Config #10 done
-val loss:  1.2823656797409058 best epoch:  66
-@1: 0.7863105175292153 Config #11 done
-val loss:  1.6893678903579712 best epoch:  97
-@1: 0.8330550918196995 Config #12 done
-val loss:  1.3424922227859497 best epoch:  39
-@1: 0.8046744574290484 Config #13 done
-val loss:  1.8744831085205078 best epoch:  31
-@1: 0.7729549248747913 Config #14 done
-val loss:  1.3267028331756592 best epoch:  59
-@1: 0.8230383973288815 Config #15 done
-val loss:  1.4807522296905518 best epoch:  59
-@1: 0.8180300500834724 Config #16 done
-val loss:  1.2580164670944214 best epoch:  83
-@1: 0.8113522537562604 Config #17 done
-val loss:  1.486486554145813 best epoch:  41
-@1: 0.7429048414023373 Config #18 done
-val loss:  1.4599981307983398 best epoch:  99
-@1: 0.8330550918196995 Config #19 done
-val loss:  1.874061942100525 best epoch:  82
-@1: 0.8113522537562604 Config #20 done
-val loss:  1.1509321928024292 best epoch:  60
-@1: 0.8664440734557596 Config #21 done
-val loss:  1.917921781539917 best epoch:  57
-@1: 0.8280467445742905 Config #22 done
-val loss:  1.1096094846725464 best epoch:  66
-@1: 0.8430717863105175 Config #23 done
-val loss:  1.6364293098449707 best epoch:  21
-@1: 0.7412353923205343 Config #24 done
-val loss:  1.1276112794876099 best epoch:  41
-@1: 0.8447412353923205 Config #25 done
-val loss:  1.5519585609436035 best epoch:  116
-@1: 0.8247078464106845 Config #26 done
-val loss:  1.1092759370803833 best epoch:  48
-@1: 0.8697829716193656 Config #27 done
-val loss:  1.5347591638565063 best epoch:  92
-@1: 0.8530884808013356 Config #28 done
-val loss:  1.2703592777252197 best epoch:  123
-@1: 0.8848080133555927 Config #29 done
-val loss:  1.8306552171707153 best epoch:  100
-@1: 0.8530884808013356 Config #30 done
-val loss:  1.2267709970474243 best epoch:  37
-@1: 0.8447412353923205 Config #31 done
-val loss:  1.5358270406723022 best epoch:  129
-@1: 0.8397328881469115 Config #32 done
-val loss:  1.2315093278884888 best epoch:  56
-@1: 0.8647746243739566 Config #33 done
-val loss:  1.5198472738265991 best epoch:  70
-@1: 0.8564273789649416 Config #34 done
-val loss:  1.1121281385421753 best epoch:  109
-@1: 0.8747913188647746 Config #35 done
-val loss:  1.4746636152267456 best epoch:  68
-@1: 0.7896494156928213 Config #36 done
-PROCESSING RESULTS
-Model selection winner for experiment results/dbp15k/zh_en/euclidean_dot/16_CV/FOLD_13: config #29 with hits1 0.885
-val loss:  1.044920802116394 best epoch:  144
-val loss:  1.0579684972763062 best epoch:  147
-val loss:  1.0670149326324463 best epoch:  119
-END OF FOLD.
-TR:	@1: 0.888 @10: 0.609         TS:	@1: 0.901 @10: 0.855
-val loss:  1.4543689489364624 best epoch:  31
-@1: 0.7495826377295493 Config #1 done
-val loss:  1.6874302625656128 best epoch:  51
-@1: 0.7979966611018364 Config #2 done
-val loss:  1.3954652547836304 best epoch:  96
-@1: 0.8380634390651085 Config #3 done
-val loss:  1.512121319770813 best epoch:  41
-@1: 0.7796327212020033 Config #4 done
-val loss:  1.288096308708191 best epoch:  52
-@1: 0.7979966611018364 Config #5 done
-val loss:  1.7030961513519287 best epoch:  76
-@1: 0.7996661101836394 Config #6 done
-val loss:  1.277673602104187 best epoch:  49
-@1: 0.7879799666110183 Config #7 done
-val loss:  1.625638723373413 best epoch:  37
-@1: 0.7896494156928213 Config #8 done
-val loss:  1.1861658096313477 best epoch:  64
-@1: 0.8297161936560935 Config #9 done
-val loss:  1.3553907871246338 best epoch:  60
-@1: 0.8230383973288815 Config #10 done
-val loss:  1.3629955053329468 best epoch:  88
-@1: 0.8213689482470785 Config #11 done
-val loss:  1.564584732055664 best epoch:  46
-@1: 0.7729549248747913 Config #12 done
-val loss:  1.3625315427780151 best epoch:  30
-@1: 0.7896494156928213 Config #13 done
-val loss:  1.7839981317520142 best epoch:  40
-@1: 0.7779632721202003 Config #14 done
-val loss:  1.270429015159607 best epoch:  49
-@1: 0.8247078464106845 Config #15 done
-val loss:  1.4974445104599 best epoch:  66
-@1: 0.8330550918196995 Config #16 done
-val loss:  1.3294209241867065 best epoch:  83
-@1: 0.8263772954924875 Config #17 done
-val loss:  1.7443782091140747 best epoch:  121
-@1: 0.8347245409015025 Config #18 done
-val loss:  1.3533713817596436 best epoch:  40
-@1: 0.8230383973288815 Config #19 done
-val loss:  1.9899168014526367 best epoch:  68
-@1: 0.8030050083472454 Config #20 done
-val loss:  1.16512930393219 best epoch:  31
-@1: 0.8113522537562604 Config #21 done
-val loss:  1.8850184679031372 best epoch:  77
-@1: 0.8380634390651085 Config #22 done
-val loss:  1.0593856573104858 best epoch:  73
-@1: 0.8514190317195326 Config #23 done
-val loss:  1.9060790538787842 best epoch:  48
-@1: 0.8063439065108514 Config #24 done
-val loss:  1.32160222530365 best epoch:  31
-@1: 0.8363939899833055 Config #25 done
-val loss:  1.9896868467330933 best epoch:  38
-@1: 0.7879799666110183 Config #26 done
-val loss:  1.1408534049987793 best epoch:  40
-@1: 0.8414023372287145 Config #27 done
-val loss:  1.836885929107666 best epoch:  64
-@1: 0.8280467445742905 Config #28 done
-val loss:  1.3231298923492432 best epoch:  141
-@1: 0.8697829716193656 Config #29 done
-val loss:  1.743896484375 best epoch:  65
-@1: 0.8146911519198664 Config #30 done
-val loss:  1.2192177772521973 best epoch:  52
-@1: 0.8280467445742905 Config #31 done
-val loss:  1.926646113395691 best epoch:  37
-@1: 0.7312186978297162 Config #32 done
-val loss:  1.239593267440796 best epoch:  80
-@1: 0.8697829716193656 Config #33 done
-val loss:  1.9177696704864502 best epoch:  84
-@1: 0.8464106844741235 Config #34 done
-val loss:  1.214386224746704 best epoch:  74
-@1: 0.8447412353923205 Config #35 done
-val loss:  2.1966750621795654 best epoch:  72
-@1: 0.7946577629382304 Config #36 done
-PROCESSING RESULTS
-Model selection winner for experiment results/dbp15k/zh_en/euclidean_dot/16_CV/FOLD_15: config #29 with hits1 0.870
-val loss:  1.0464750528335571 best epoch:  112
-val loss:  1.0528265237808228 best epoch:  159
-val loss:  1.0512803792953491 best epoch:  111
-END OF FOLD.
-TR:	@1: 0.868 @10: 0.602         TS:	@1: 0.881 @10: 0.850
-Assessment for experiment results/dbp15k/zh_en/euclidean_dot/16_CV has ended
+
+=================START OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_1=================
+
+Config #1
+BEST EPOCH: 36
+	TR: L 1.8075170516967773, H1 0.07384230287859825;
+	VL: L: 1.730774998664856 H1:0.055
+Config #2
+NAN LOSS
+BEST EPOCH: -1
+	TR: L None, H1 None;
+	VL: L: None H1:None
+Config #3
+NAN LOSS
+BEST EPOCH: -1
+	TR: L None, H1 None;
+	VL: L: None H1:None
+Config #4
+BEST EPOCH: 20
+	TR: L 2.044173002243042, H1 0.04881101376720901;
+	VL: L: 1.73581063747406 H1:0.035
+
+-------PROCESSING MODEL SELECTION RESULTS OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_1-------
+
+Winner config: 3
+BEST EPOCH: 109
+	TR: L 1.064786672592163, H1 0.7967967967967968;
+	VL: L: 1.5956718921661377 H1:0.44218863801893665
+BEST EPOCH: 110
+	TR: L 1.0149799585342407, H1 0.8048048048048048;
+	VL: L: 1.6809546947479248 H1:0.4193372177713037
+BEST EPOCH: 113
+	TR: L 1.0384358167648315, H1 0.7907907907907908;
+	VL: L: 1.6200536489486694 H1:0.4322651128914785
+FOLD RESULTS:
+TR:	@1: 0.805 @10: 0.937         TS:	@1: 0.442 @10: 0.743
+
+=================END OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_1=================
+
+
+=================START OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_3=================
+
+Config #1
+BEST EPOCH: 37
+	TR: L 1.8777655363082886, H1 0.05006257822277847;
+	VL: L: 1.9775019884109497 H1:0.045
+Config #2
+BEST EPOCH: 56
+	TR: L 2.4725658893585205, H1 0.06508135168961202;
+	VL: L: 2.502328395843506 H1:0.04
+Config #3
+BEST EPOCH: 157
+	TR: L 0.9271556735038757, H1 0.523153942428035;
+	VL: L: 2.099730968475342 H1:0.245
+Config #4
+BEST EPOCH: 3
+	TR: L 5.584740161895752, H1 0.0050062578222778474;
+	VL: L: 1.8848822116851807 H1:0.025
+
+-------PROCESSING MODEL SELECTION RESULTS OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_3-------
+
+Winner config: 3
+BEST EPOCH: 121
+	TR: L 0.8491760492324829, H1 0.8638638638638638;
+	VL: L: 1.4960360527038574 H1:0.45092862345229423
+BEST EPOCH: 100
+	TR: L 0.9692652821540833, H1 0.8388388388388388;
+	VL: L: 1.5638507604599 H1:0.43517844136926437
+BEST EPOCH: 126
+	TR: L 0.7828685641288757, H1 0.8828828828828829;
+	VL: L: 1.6649549007415771 H1:0.41888201019664967
+FOLD RESULTS:
+TR:	@1: 0.883 @10: 0.965         TS:	@1: 0.451 @10: 0.749
+
+=================END OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_3=================
+
+
+=================START OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_5=================
+
+Config #1
+NAN LOSS
+BEST EPOCH: -1
+	TR: L None, H1 None;
+	VL: L: None H1:None
+Config #2
+BEST EPOCH: 37
+	TR: L 1.4343065023422241, H1 0.058823529411764705;
+	VL: L: 1.3799805641174316 H1:0.05
+Config #3
+BEST EPOCH: 318
+	TR: L 0.20348180830478668, H1 0.37922403003754696;
+	VL: L: 1.7666012048721313 H1:0.14
+Config #4
+BEST EPOCH: 301
+	TR: L 0.6534180641174316, H1 0.4568210262828536;
+	VL: L: 2.3612818717956543 H1:0.18
+
+-------PROCESSING MODEL SELECTION RESULTS OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_5-------
+
+Winner config: 3
+BEST EPOCH: 112
+	TR: L 0.9797781109809875, H1 0.8218218218218218;
+	VL: L: 1.5627267360687256 H1:0.4383648943918427
+BEST EPOCH: 103
+	TR: L 0.965408980846405, H1 0.8218218218218218;
+	VL: L: 1.4735312461853027 H1:0.4635833940276766
+BEST EPOCH: 89
+	TR: L 1.095094084739685, H1 0.7957957957957958;
+	VL: L: 1.631110668182373 H1:0.4469227967953387
+FOLD RESULTS:
+TR:	@1: 0.822 @10: 0.950         TS:	@1: 0.464 @10: 0.762
+
+=================END OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_5=================
+
+
+=================START OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_7=================
+
+Config #1
+BEST EPOCH: 46
+	TR: L 1.995516300201416, H1 0.0425531914893617;
+	VL: L: 3.6696503162384033 H1:0.02
+Config #2
+BEST EPOCH: 97
+	TR: L 1.7375696897506714, H1 0.07884856070087609;
+	VL: L: 2.5667824745178223 H1:0.02
+Config #3
+BEST EPOCH: 54
+	TR: L 1.8099461793899536, H1 0.0688360450563204;
+	VL: L: 3.1038084030151367 H1:0.025
+Config #4
+BEST EPOCH: 55
+	TR: L 1.4887615442276, H1 0.07008760951188986;
+	VL: L: 2.843153476715088 H1:0.03
+
+-------PROCESSING MODEL SELECTION RESULTS OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_7-------
+
+Winner config: 3
+BEST EPOCH: 106
+	TR: L 1.044247031211853, H1 0.8128128128128128;
+	VL: L: 1.4888262748718262 H1:0.4668608885651857
+BEST EPOCH: 96
+	TR: L 1.1738139390945435, H1 0.7797797797797797;
+	VL: L: 1.5533686876296997 H1:0.4549344501092498
+BEST EPOCH: 101
+	TR: L 1.0862375497817993, H1 0.8018018018018018;
+	VL: L: 1.5897661447525024 H1:0.44346321922796794
+FOLD RESULTS:
+TR:	@1: 0.813 @10: 0.933         TS:	@1: 0.467 @10: 0.764
+
+=================END OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_7=================
+
+
+=================START OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_9=================
+
+Config #1
+NAN LOSS
+BEST EPOCH: 0
+	TR: L 13.334705352783203, H1 0.0012531328320802004;
+	VL: L: 1.560686469078064 H1:0.0
+Config #2
+BEST EPOCH: 33
+	TR: L 4.8852458000183105, H1 0.013784461152882205;
+	VL: L: 1.2963870763778687 H1:0.03
+Config #3
+BEST EPOCH: 5
+	TR: L 5.015605926513672, H1 0.006265664160401002;
+	VL: L: 3.4093968868255615 H1:0.03
+Config #4
+BEST EPOCH: 12
+	TR: L 3.7272253036499023, H1 0.02631578947368421;
+	VL: L: 2.9959332942962646 H1:0.03
+
+-------PROCESSING MODEL SELECTION RESULTS OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_9-------
+
+Winner config: 3
+BEST EPOCH: 132
+	TR: L 0.8366513848304749, H1 0.7164328657314629;
+	VL: L: 1.6256687641143799 H1:0.3799726900318616
+BEST EPOCH: 119
+	TR: L 0.9873422384262085, H1 0.6723446893787575;
+	VL: L: 1.8121029138565063 H1:0.35439235320892126
+BEST EPOCH: 149
+	TR: L 0.6969013214111328, H1 0.7304609218436874;
+	VL: L: 1.7302297353744507 H1:0.36941283568502503
+FOLD RESULTS:
+TR:	@1: 0.730 @10: 0.798         TS:	@1: 0.380 @10: 0.696
+
+=================END OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_9=================
+
+
+=================START OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_11=================
+
+Config #1
+BEST EPOCH: 191
+	TR: L 0.764060378074646, H1 0.36215538847117795;
+	VL: L: 2.10294246673584 H1:0.155
+Config #2
+BEST EPOCH: 197
+	TR: L 0.7514285445213318, H1 0.3458646616541353;
+	VL: L: 1.9672961235046387 H1:0.12
+Config #3
+BEST EPOCH: 26
+	TR: L 2.102855682373047, H1 0.02882205513784461;
+	VL: L: 2.250706911087036 H1:0.03
+Config #4
+NAN LOSS
+BEST EPOCH: -1
+	TR: L None, H1 None;
+	VL: L: None H1:None
+
+-------PROCESSING MODEL SELECTION RESULTS OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_11-------
+
+Winner config: 3
+BEST EPOCH: 287
+	TR: L 0.5527661442756653, H1 0.5681362725450901;
+	VL: L: 1.9587479829788208 H1:0.23950842057350932
+BEST EPOCH: 205
+	TR: L 0.6934336423873901, H1 0.3807615230460922;
+	VL: L: 2.044015407562256 H1:0.15002275830678197
+BEST EPOCH: 290
+	TR: L 0.6375057101249695, H1 0.35971943887775554;
+	VL: L: 1.8742350339889526 H1:0.14401456531634046
+FOLD RESULTS:
+TR:	@1: 0.568 @10: 0.606         TS:	@1: 0.240 @10: 0.475
+
+=================END OF FOLD results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV/FOLD_11=================
+
+Assessment for experiment results/dbp15k/zh_en/euclidean_dot_emb_dim_60_3_layers/12_CV has ended
 Results:
-{'avg_TR_hits1': 0.9497663551401869, 'std_TR_hits1': 0.043992635091929355, 'avg_TS_hits1': 0.9674566088117489, 'std_TS_hits1': 0.044496237399961745, 'avg_TR_hits10': 0.6233754673313157, 'std_TR_hits10': 0.02684145420878552, 'avg_TS_hits10': 0.8605349830870571, 'std_TS_hits10': 0.015679602044261227}
+{'avg_TR_hits1': 0.7701532527851834, 'std_TR_hits1': 0.1006516435436873, 'avg_TS_hits1': 0.40717377577824393, 'std_TS_hits1': 0.08034995762113976, 'avg_TR_hits10': 0.864765400002541, 'std_TR_hits10': 0.12813624368792662, 'avg_TS_hits10': 0.6983465101111749, 'std_TS_hits10': 0.10223544162379775}

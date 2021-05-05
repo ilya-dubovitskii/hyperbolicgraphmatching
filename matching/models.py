@@ -12,7 +12,8 @@ from torch_geometric.nn.inits import reset
 from scipy.special import beta
 
 from manifolds.hyperboloid import Hyperboloid
-from layers.hyp_layers import MyHyperbolicGraphConvolution, HypLinear, HypReLU
+from layers.hyp_layers import HyperbolicGC, HypLinear, HypReLU
+from layers.layers import EuclideanGC, Linear
 from layers.rel import RelConv
 
 import math
@@ -25,10 +26,10 @@ except ImportError:
     LazyTensor = None
 
     
-class HyperbolicRelCNN(torch.nn.Module):
+class HyperbolicGCN(torch.nn.Module):
     def __init__(self, manifold, in_channels, out_channels, c, num_layers,
                  cat=True, lin=True, dropout=0.0, use_att=False, use_bias=True):
-        super(HyperbolicRelCNN, self).__init__()
+        super().__init__()
         
         self.in_channels = in_channels
         self.num_layers = num_layers
@@ -41,7 +42,7 @@ class HyperbolicRelCNN(torch.nn.Module):
         self.convs = torch.nn.ModuleList()
 
         for _ in range(self.num_layers):
-            self.convs.append(MyHyperbolicGraphConvolution(manifold, in_channels, out_channels, c, dropout=dropout, use_att=use_att, use_bias=use_bias))
+            self.convs.append(HyperbolicGC(manifold, in_channels, out_channels, c, dropout=dropout, use_att=use_att, use_bias=use_bias))
             in_channels = out_channels
 
         if self.cat:
@@ -91,6 +92,74 @@ class HyperbolicRelCNN(torch.nn.Module):
                 x = self.manifold.logmap0(x, c=self.c) * self.beta_total / self.beta_out    
             x = torch.cat(xs, dim=-1)
             x = self.manifold.expmap0(x, c=self.c)
+        else:
+            x = xs[-1]
+            
+        x = self.final(x) if self.lin else x
+        
+        return x
+
+    def __repr__(self):
+        return ('{}({}, {}, c={} num_layers={}, cat={}, lin={}, '
+                'dropout={})').format(self.__class__.__name__,
+                                      self.in_channels, self.out_channels, self.c,
+                                      self.num_layers,
+                                      self.cat, self.lin, self.dropout)
+    
+    
+
+class EuclideanGCN(torch.nn.Module):
+    def __init__(self, in_channels, out_channels, num_layers,
+                 cat=True, lin=True, dropout=0.0, use_att=False, use_bias=True):
+        super().__init__()
+        
+        self.in_channels = in_channels
+        self.num_layers = num_layers
+        self.cat = cat
+        self.lin = lin
+        self.dropout = dropout
+        
+        self.convs = torch.nn.ModuleList()
+
+        for _ in range(self.num_layers):
+            self.convs.append(EuclideanGC(in_channels, out_channels, dropout=dropout, use_att=use_att, use_bias=use_bias))
+            in_channels = out_channels
+
+        if self.cat:
+            in_channels = self.in_channels + num_layers * out_channels
+        else:
+            in_channels = out_channels
+
+        if self.lin:
+            self.out_channels = out_channels
+            self.final = Linear(in_channels, out_channels, dropout, use_bias)
+        else:
+            self.out_channels = in_channels
+
+        self.reset_parameters()
+    
+    @property
+    def device(self):
+        return self.convs[0].weight.device
+    
+    def set_verbose(self, verbose=True):
+        for conv in self.convs:
+            conv.set_verbose(verbose)
+    
+    def reset_parameters(self):
+        for conv in self.convs:
+            conv.reset_parameters()
+        if self.lin:
+            self.final.reset_parameters()
+
+    def forward(self, x, edge_index, edge_attr):
+        xs = [x]
+        for conv in self.convs:
+            x = conv(xs[-1], edge_index)
+            xs.append(x)
+            
+        if self.cat:
+            x = torch.cat(xs, dim=-1)
         else:
             x = xs[-1]
             
@@ -394,7 +463,8 @@ class EuclideanGraphMatching(torch.nn.Module):
         """
         h_s = self.psi(x_s, edge_index_s, edge_attr_s)
         h_t = self.psi(x_t, edge_index_t, edge_attr_t)
-
+        
+        
         h_s, s_mask = to_dense_batch(h_s, batch_s, fill_value=0)
         h_t, t_mask = to_dense_batch(h_t, batch_t, fill_value=0)
 

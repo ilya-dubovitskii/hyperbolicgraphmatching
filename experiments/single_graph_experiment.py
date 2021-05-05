@@ -1,9 +1,8 @@
 import torch
-import sys, os, argparse
+import sys, os, argparse, json
 sys.path.append("../evaluation")
 sys.path.append("..")
 from torch_geometric.datasets import DBP15K
-from matching.models import HyperbolicRelCNN
 from manifolds.hyperboloid import Hyperboloid
 from single_graph.KFoldAssessment import KFoldAssessment
 from single_graph.HoldOutSelection import HoldOutSelector
@@ -25,34 +24,36 @@ class SumEmbedding(object):
         data.x1, data.x2 = data.x1.sum(dim=1), data.x2.sum(dim=1)
         return data
 
+
+EXP_NAME = 'emb_dim_100_3_layers'
 if args.space == 'hyperbolic':
     parameter_ranges = {'space': ['Hyperbolic'],
                         'c': [0.5, 1, 2, 4],
                         'in_channels': [50],
-                        'out_channels': [30, 50, 100, 200],
-                        'num_layers': [1, 2, 3],
+                        'out_channels': [100],
+                        'num_layers': [3],
                         'cat': [True],
                         'lin': [True],
                         'dropout': [0],
                         'sim': [args.sim],
                         'k': [10],
-                        'lr': [1e-3, 3e-3],
-                        'gamma': [0.7],
+                        'lr': [0.9*1e-3, 1e-3, 1.1*1e-3, 1.2*1e-3],
+                        'gamma': [0.8],
                         'max_epochs': [500]
                        }
 else:
     parameter_ranges = {'space': ['Euclidean'],
                         'c': [None],
                         'in_channels': [50],
-                        'out_channels': [100, 200],
-                        'num_layers': [1, 2, 3],
+                        'out_channels': [100],
+                        'num_layers': [3],
                         'cat': [True],
                         'lin': [True],
-                        'dropout': [0, 0.3, 0.5],
+                        'dropout': [0],
                         'sim': [args.sim],
                         'k': [10],
-                        'lr': [1e-3, 3e-3],
-                        'gamma': [0.7],
+                        'lr': [0.9*1e-3, 1e-3, 1.1*1e-3, 1.2*1e-3],
+                        'gamma': [0.8],
                         'max_epochs': [500]
                        }
 
@@ -100,9 +101,10 @@ else:
     raise ValueError('wrong dataset')
 
 if args.dataset == 'dbp15k':
-    results_path = f'results/{args.dataset}/{args.category}/{args.space}_{args.sim}'
+    results_path = f'results/{args.dataset}/{args.category}/{args.space}_{args.sim}_{EXP_NAME}'
 else:
-    results_path = f'results/{args.dataset}/{args.space}_{args.sim}'
+    results_path = f'results/{args.dataset}/{args.space}_{args.sim}_{EXP_NAME}'
+
     
 if args.num_folds > 5:
     half_folds = True
@@ -111,3 +113,6 @@ else:
     
 ass = KFoldAssessment(args.num_folds, results_path, model_selector, invert_folds=True, half_folds=half_folds)
 ass.risk_assessment(data, device=args.device)
+
+with open(f'{results_path}/parameter_ranges.json', 'w') as fp:
+    json.dump(parameter_ranges, fp)

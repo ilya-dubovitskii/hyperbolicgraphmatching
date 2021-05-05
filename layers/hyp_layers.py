@@ -13,12 +13,6 @@ from torch_geometric.nn import MessagePassing
 
 import numpy as np
 
-def hook_fn(grad, msg=None):
-#     print(f'\n------------{msg}------------')
-#     print(f'the norm is: {grad.norm()}')
-#     print(f'++++++++++++{msg}++++++++++++\n')
-    
-    return grad
 
 def get_dim_act_curv(args):
     """
@@ -102,8 +96,7 @@ class HypLinear(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        torch.manual_seed(123)
-        init.xavier_uniform_(self.weight, gain=math.sqrt(1))
+        init.xavier_uniform_(self.weight, gain=1)
         init.constant_(self.bias, 0)
 
     def forward(self, x):
@@ -187,13 +180,9 @@ class HypReLU(Module):
         return x
 
     
-    
-    
-        
-class MyHyperbolicGraphConvolution(MessagePassing):
+class HyperbolicGC(MessagePassing):
     def __init__(self, manifold, in_channels, out_channels, c, dropout=0, use_att=False, use_bias=False, verbose=False):
         super().__init__(aggr='add')
-#         print(f'in: {in_channels}, out: {out_channels}, c: {c}, dropout: {dropout}, att: {use_att}, bias: {use_bias}')
         self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
         self.bias = nn.Parameter(torch.Tensor(out_channels)) if use_bias else None
         self.att = nn.Linear(2 * out_channels, 1) if use_att else None

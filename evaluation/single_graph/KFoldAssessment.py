@@ -98,12 +98,13 @@ class KFoldAssessment:
         return assessment_results
         
     def _risk_assessment_helper(self, dataset, tr_idx, ts_idx, fold_dir, device):
+        print(f'\n=================START OF FOLD {fold_dir}=================\n')
         winner_config = self.model_selector.model_selection(dataset, tr_idx, fold_dir, device)
         exp = Experiment() #some path
-        tr_hits1, ts_hits1, tr_hits10, ts_hits10 = [], [], [], []
+        tr_hits1, tr_hits10, ts_hits1, ts_hits10 = [], [], [], []
         
         for i in range(3):
-            tr_h1, ts_h1, tr_h10, ts_h10 = exp.run_valid(dataset, tr_idx, ts_idx, winner_config, device)
+            tr_h1, tr_h10, ts_h1, ts_h10 = exp.run_valid(dataset, tr_idx, ts_idx, winner_config, device)
             tr_hits1.append(tr_h1)
             ts_hits1.append(ts_h1)
             tr_hits10.append(tr_h10)
@@ -114,8 +115,11 @@ class KFoldAssessment:
         tr_hits10 = np.max(tr_hits10)
         ts_hits10 = np.max(ts_hits10)
         
-        print(f'END OF FOLD.\nTR:\t@1: {tr_hits1:.03f} @10: {tr_hits10:.03f} \
+        print('FOLD RESULTS:')
+        print(f'TR:\t@1: {tr_hits1:.03f} @10: {tr_hits10:.03f} \
         TS:\t@1: {ts_hits1:.03f} @10: {ts_hits10:.03f}')
+        
+        print(f'\n=================END OF FOLD {fold_dir}=================\n')
         
         results_dict = {'TR_hits1': tr_hits1, 'TS_hits1': ts_hits1,
                         'TR_hits10': tr_hits10, 'TS_hits10': ts_hits10}

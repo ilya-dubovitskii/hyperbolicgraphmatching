@@ -1,0 +1,12 @@
+{"en_fr_euclidean": "$52.0 \pm 12.3$",
+ "en_fr_hyperbolic": "$70.3 \pm 7.2$",
+ "fr_en_euclidean": "$51.7 \pm 10.5$",
+ "fr_en_hyperbolic": "$67.1 \pm 6.3$",
+ "en_zh_euclidean": "$38.3 \pm 11.6$",
+ "en_zh_hyperbolic": "$44.9 \pm 18.5$",
+ "zh_en_euclidean": "$36.7 \pm 12.9$",
+ "zh_en_hyperbolic": "$45.3 \pm 19.5$",
+ "en_ja_euclidean": "$40.0 \pm 11.6$",
+ "en_ja_hyperbolic": "$50.1 \pm 10.3$",
+ "ja_en_euclidean": "$39.3 \pm 11.2$",
+ "ja_en_hyperbolic": "$51.8 \pm 9.2$"}

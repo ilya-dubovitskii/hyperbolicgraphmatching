@@ -1,1 +1,0 @@
-{"space": "Hyperbolic", "c": 0.5, "out_channels": 30, "num_layers": 1, "sim": "dot", "cat": true, "lin": true, "dropout": 0, "k": 10, "lr": 0.001, "gamma": 0.8, "max_epochs": 500}

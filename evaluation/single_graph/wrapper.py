@@ -8,7 +8,7 @@ from manifolds.hyperboloid import Hyperboloid
 from single_graph.patience import Patience
 
 _supported_manifold_list = ['Euclidean', 'Hyperbolic']
-_c_to_norm = {0.5: 3.5, 1: 5.5, 2: 7, 4: 9}
+_c_to_norm = {0.005: 0.5, 0.01: 0.6, 0.015: 0.8, 0.02: 0.9, 0.025: 1, 0.04: 1.2, 0.08: 1.7, 0.16: 2.4, 0.32: 3.4, 0.64: 4.8, 0.5: 3.5, 1: 5.5, 2: 7, 4: 9}
 
 
 class ModelWrapper:

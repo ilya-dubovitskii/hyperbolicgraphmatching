@@ -28,10 +28,10 @@ class SumEmbedding(object):
 EXP_NAME = 'emb_dim_100_3_layers'
 if args.space == 'hyperbolic':
     parameter_ranges = {'space': ['Hyperbolic'],
-                        'c': [0.5, 1, 2, 4],
+                        'c': [0.01, 0.02, 0.04, 0.08, 0.16, 0.32, 0.64],
                         'in_channels': [50],
                         'out_channels': [100],
-                        'num_layers': [3],
+                        'num_layers': [1],
                         'cat': [True],
                         'lin': [True],
                         'dropout': [0],
@@ -46,7 +46,7 @@ else:
                         'c': [None],
                         'in_channels': [50],
                         'out_channels': [100],
-                        'num_layers': [3],
+                        'num_layers': [1],
                         'cat': [True],
                         'lin': [True],
                         'dropout': [0],

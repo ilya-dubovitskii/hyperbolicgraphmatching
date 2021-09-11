@@ -3,11 +3,12 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import StepLR
 
 from dgmc.models import RelCNN
-from matching.models import EuclideanGCN, HyperbolicGCN, EuclideanGraphMatching, HyperbolicGraphMatching
+from matching.models import EuclideanGCN, HyperbolicGCN, EuclideanGraphMatching, HyperbolicGraphMatching, MobiusGCN, MobiusGraphMatching
 from manifolds.hyperboloid import Hyperboloid
 from single_graph.patience import Patience
+import geoopt
 
-_supported_manifold_list = ['Euclidean', 'Hyperbolic']
+_supported_manifold_list = ['Euclidean', 'Hyperbolic', 'Mobius']
 _c_to_norm = {0.005: 0.5, 0.01: 0.6, 0.015: 0.8, 0.02: 0.9, 0.025: 1, 0.04: 1.2, 0.08: 1.7, 0.16: 2.4, 0.32: 3.4, 0.64: 4.8, 0.5: 3.5, 1: 5.5, 2: 7, 4: 9}
 
 
@@ -61,7 +62,11 @@ class ModelWrapper:
             
             h_s[mask_s] = manifold.expmap0(dataset.x_s[mask_s]/(2*norm**2), c=self.c)
             h_t[mask_t] = manifold.expmap0(dataset.x_t[mask_t]/(2*norm**2), c=self.c)
-            
+        elif self.space == 'Mobius':
+            manifold = geoopt.PoincareBall()
+            psi = MobiusGCN(manifold, self.input_dim, self.out_channels,
+                                self.num_layers, cat=self.cat, lin=self.lin, dropout=self.dropout).to(device)
+            model = MobiusGraphMatching(psi, k=self.k, sim=self.sim).to(device)
         else:
             raise ValueError(f'Wrong manifold! Expected one of: {_supported_manifold_list}')
             

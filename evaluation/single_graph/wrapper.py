@@ -63,6 +63,7 @@ class ModelWrapper:
             h_s[mask_s] = manifold.expmap0(dataset.x_s[mask_s]/(2*norm**2), c=self.c)
             h_t[mask_t] = manifold.expmap0(dataset.x_t[mask_t]/(2*norm**2), c=self.c)
         elif self.space == 'Mobius':
+            print('Mobius NNs are initializing...')
             manifold = geoopt.PoincareBall()
             psi = MobiusGCN(manifold, self.input_dim, self.out_channels,
                                 self.num_layers, cat=self.cat, lin=self.lin, dropout=self.dropout).to(device)

@@ -253,4 +253,3 @@ class HyperbolicGC(MessagePassing):
             x = self.manifold.proj(x, c=self.c)
             
         return self.propagate(edge_index, x=x)
-    

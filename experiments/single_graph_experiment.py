@@ -25,12 +25,12 @@ class SumEmbedding(object):
         return data
 
 
-EXP_NAME = 'emb_dim_100_3_layers'
+EXP_NAME = 'emb_dim_50_1_layer_geoopt_mobius'
 if args.space == 'hyperbolic':
     parameter_ranges = {'space': ['Hyperbolic'],
-                        'c': [0.01, 0.02, 0.04, 0.08, 0.16, 0.32, 0.64],
+                        'c': [0.001, 0.005, 0.01, 0.05],
                         'in_channels': [50],
-                        'out_channels': [100],
+                        'out_channels': [50],
                         'num_layers': [1],
                         'cat': [True],
                         'lin': [True],
@@ -41,7 +41,7 @@ if args.space == 'hyperbolic':
                         'gamma': [0.8],
                         'max_epochs': [500]
                        }
-else:
+elif args.space == 'euclidean':
     parameter_ranges = {'space': ['Euclidean'],
                         'c': [None],
                         'in_channels': [50],
@@ -56,6 +56,22 @@ else:
                         'gamma': [0.8],
                         'max_epochs': [500]
                        }
+elif args.space == 'mobius':
+    parameter_ranges = {'space': ['Mobius'],
+                        'c': [0.05, 0.1, 0.5, 1, 2],
+                        'in_channels': [50],
+                        'out_channels': [50],
+                        'num_layers': [1],
+                        'cat': [True],
+                        'lin': [True],
+                        'dropout': [0],
+                        'sim': [args.sim],
+                        'k': [10],
+                        'lr': [0.9*1e-3, 1e-3, 1.1*1e-3, 1.2*1e-3],
+                        'gamma': [0.8],
+                        'max_epochs': [500]
+                       }
+
 
     
 model_selector = HoldOutSelector(parameter_ranges, full_search=True)

@@ -230,7 +230,7 @@ class MobiusGCN(torch.nn.Module):
 
         if self.lin:
             self.out_channels = out_channels
-            self.final = MobiusLinear(in_channels, out_channels, ball=self.manifold, use_bias=use_bias)
+            self.final = MobiusLinear(in_channels, out_channels, ball=self.manifold, bias=use_bias)
         else:
             self.out_channels = in_channels
 

@@ -13,7 +13,10 @@ class MobiusGC(MessagePassing):
     def __init__(self, manifold, in_channels, out_channels, dropout=0, use_att=False, use_bias=False, verbose=False):
         super().__init__(aggr='add')
         self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels))
-        self.bias = geoopt.ManifoldParameter(use_bias, manifold=manifold) if use_bias else None
+        if use_bias:
+            self.bias = geoopt.ManifoldParameter(nn.Parameter(torch.empty(out_channels)), manifold=manifold)
+        else:
+            self.bias = None    
         self.att = nn.Linear(2 * out_channels, 1) if use_att else None
         self.dropout = nn.Dropout(p=dropout)
         self.manifold = manifold

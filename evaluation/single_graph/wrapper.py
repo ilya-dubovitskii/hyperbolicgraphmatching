@@ -70,10 +70,10 @@ class ModelWrapper:
             model = MobiusGraphMatching(psi, k=self.k, sim=self.sim).to(device)
 
             h_s = manifold.expmap0(dataset.x_s)
-            h_s = manifold.proj(h_s)
+            h_s = manifold.projx(h_s)
 
             h_t = manifold.expmap0(dataset.x_t)
-            h_t = manifold.proj(h_t)
+            h_t = manifold.projx(h_t)
         else:
             raise ValueError(f'Wrong manifold! Expected one of: {_supported_manifold_list}')
             

@@ -264,12 +264,12 @@ class MobiusGCN(torch.nn.Module):
             xs.append(x)
 
         if self.cat:
-            xs[0] = self.manifold.logmap0(xs[0], c=self.c) * self.beta_total / self.beta_in
+            xs[0] = self.manifold.logmap0(xs[0]) * self.beta_total / self.beta_in
 
             for x in xs[1:]:
-                x = self.manifold.logmap0(x, c=self.c) * self.beta_total / self.beta_out
+                x = self.manifold.logmap0(x) * self.beta_total / self.beta_out
             x = torch.cat(xs, dim=-1)
-            x = self.manifold.expmap0(x, c=self.c)
+            x = self.manifold.expmap0(x)
         else:
             x = xs[-1]
 

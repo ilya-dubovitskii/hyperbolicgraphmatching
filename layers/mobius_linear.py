@@ -30,8 +30,8 @@ class MobiusLinear(torch.nn.Linear):
         # we have to attach them to the closure Module.
         # It is hard to implement device allocation for manifolds in other case.
         self.ball = create_ball(ball, c)
-        if self.use_bias:
-            self.bias = geoopt.ManifoldParameter(self.use_bias, manifold=self.ball)
+        if self.bias is not None:
+            self.bias = geoopt.ManifoldParameter(self.bias, manifold=self.ball)
         self.nonlin = nonlin
         self.reset_parameters()
 

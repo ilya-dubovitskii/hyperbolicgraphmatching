@@ -68,6 +68,12 @@ class ModelWrapper:
             psi = MobiusGCN(manifold, self.input_dim, self.out_channels,
                                 self.num_layers, cat=self.cat, lin=self.lin, dropout=self.dropout).to(device)
             model = MobiusGraphMatching(psi, k=self.k, sim=self.sim).to(device)
+
+            h_s = manifold.expmap0(dataset.x_s, c=self.c)
+            h_s = manifold.proj(h_s, c=self.c)
+
+            h_t = manifold.expmap0(dataset.x_t, c=self.c)
+            h_t = manifold.proj(h_t, c=self.c)
         else:
             raise ValueError(f'Wrong manifold! Expected one of: {_supported_manifold_list}')
             

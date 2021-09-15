@@ -79,7 +79,7 @@ class ModelWrapper:
             
         dataset.to(device)
         
-        optimizer = Adam(model.parameters(), lr=self.lr)
+        optimizer = geoopt.optim.RiemannianAdam(model.parameters(), lr=self.lr)
         scheduler = StepLR(optimizer, step_size=20, gamma=self.gamma)
         early_stopper = Patience()
         

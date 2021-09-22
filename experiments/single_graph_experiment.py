@@ -15,7 +15,7 @@ parser.add_argument('--device', type=str, default='cuda:0')
 parser.add_argument('--dataset', type=str, default='dbp15k')
 parser.add_argument('--category', type=str, default='fr_en')
 parser.add_argument('--num_folds', type=int, default='5')
-
+parser.add_argument('--emb_dim', type=int, default=50)
 
 args = parser.parse_args()
 
@@ -25,12 +25,12 @@ class SumEmbedding(object):
         return data
 
 
-EXP_NAME = 'emb_dim_50_1_layer_geoopt_mobius'
+EXP_NAME = f'test'
 if args.space == 'hyperbolic':
     parameter_ranges = {'space': ['Hyperbolic'],
                         'c': [0.001, 0.005, 0.01, 0.05],
                         'in_channels': [50],
-                        'out_channels': [50],
+                        'out_channels': [args.emb_dim],
                         'num_layers': [1],
                         'cat': [True],
                         'lin': [True],
@@ -45,7 +45,7 @@ elif args.space == 'euclidean':
     parameter_ranges = {'space': ['Euclidean'],
                         'c': [None],
                         'in_channels': [50],
-                        'out_channels': [100],
+                        'out_channels': [args.emb_dim],
                         'num_layers': [1],
                         'cat': [True],
                         'lin': [True],
@@ -60,7 +60,7 @@ elif args.space == 'mobius':
     parameter_ranges = {'space': ['Mobius'],
                         'c': [0.05, 0.1, 0.5, 1, 2],
                         'in_channels': [50],
-                        'out_channels': [50],
+                        'out_channels': [args.emb_dim],
                         'num_layers': [1],
                         'cat': [True],
                         'lin': [True],
@@ -92,7 +92,7 @@ elif args.dataset == 'anatomy':
     x_t = torch.load(f'{datapath}/human_embs.pt').float()
     edge_index_s = torch.load(f'{datapath}/mouse_edge_index.pt').long()
     edge_index_t = torch.load(f'{datapath}/human_edge_index.pt').long()
-    gt = torch.load(f'{datapath}/mouse_to_human_gt.pt').long()
+    gt = torch.load(f'{datapath}/gt.pt').long()
     data = GraphMatchingDataset('anatomy', x_s, edge_index_s,
                                 None, x_t, edge_index_t, None, gt)
 elif args.dataset == 'largebio':
@@ -117,9 +117,9 @@ else:
     raise ValueError('wrong dataset')
 
 if args.dataset == 'dbp15k':
-    results_path = f'results/{args.dataset}/{args.category}/{args.space}_{args.sim}_{EXP_NAME}'
+    results_path = f'results/{args.dataset}/{args.category}/{args.space}_{args.sim}_{args.emb_dim}_{EXP_NAME}'
 else:
-    results_path = f'results/{args.dataset}/{args.space}_{args.sim}_{EXP_NAME}'
+    results_path = f'results/{args.dataset}/{args.space}_{args.sim}_{args.emb_dim}_{EXP_NAME}'
 
     
 if args.num_folds > 5:

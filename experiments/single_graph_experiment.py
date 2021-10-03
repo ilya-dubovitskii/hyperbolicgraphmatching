@@ -25,10 +25,10 @@ class SumEmbedding(object):
         return data
 
 
-EXP_NAME = f'test'
+EXP_NAME = f'exp1'
 if args.space == 'hyperbolic':
     parameter_ranges = {'space': ['Hyperbolic'],
-                        'c': [0.001, 0.005, 0.01, 0.05],
+                        'c': [0.005, 0.01, 0.08, 0.16, 1],
                         'in_channels': [50],
                         'out_channels': [args.emb_dim],
                         'num_layers': [1],
@@ -58,7 +58,7 @@ elif args.space == 'euclidean':
                        }
 elif args.space == 'mobius':
     parameter_ranges = {'space': ['Mobius'],
-                        'c': [0.05, 0.1, 0.5, 1, 2],
+                        'c': [0.5, 1, 2, 3, 4],
                         'in_channels': [50],
                         'out_channels': [args.emb_dim],
                         'num_layers': [1],
@@ -73,7 +73,9 @@ elif args.space == 'mobius':
                        }
 
 
-    
+else:
+    raise ValueError(f'Wrong space!')
+         
 model_selector = HoldOutSelector(parameter_ranges, full_search=True)
 
 if args.dataset == 'dbp15k':
@@ -127,7 +129,7 @@ if args.num_folds > 5:
 else:
     half_folds = False
     
-ass = KFoldAssessment(args.num_folds, results_path, model_selector, invert_folds=True, half_folds=half_folds)
+ass = KFoldAssessment(args.num_folds, results_path, model_selector, invert_folds=False, half_folds=half_folds)
 ass.risk_assessment(data, device=args.device)
 
 with open(f'{results_path}/parameter_ranges.json', 'w') as fp:

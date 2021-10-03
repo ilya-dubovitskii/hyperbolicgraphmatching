@@ -79,7 +79,10 @@ class ModelWrapper:
             
         dataset.to(device)
         
-        optimizer = geoopt.optim.RiemannianAdam(model.parameters(), lr=self.lr)
+        if self.space == 'Mobius':
+            optimizer = geoopt.optim.RiemannianAdam(model.parameters(), lr=self.lr)
+        else:
+            optimizer = Adam(model.parameters(), lr=self.lr)
         scheduler = StepLR(optimizer, step_size=20, gamma=self.gamma)
         early_stopper = Patience()
         

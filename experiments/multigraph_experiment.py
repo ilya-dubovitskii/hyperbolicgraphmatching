@@ -27,6 +27,7 @@ parser.add_argument('--dataset', type=str, default='pascal')
 parser.add_argument('--category', type=str, default='fr_en')
 parser.add_argument('--num_folds', type=int, default='5')
 parser.add_argument('--emb_dim', type=int, default=50)
+parser.add_argument('--isotropic', action='store_true')
 
 args = parser.parse_args()
 

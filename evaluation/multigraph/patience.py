@@ -1,10 +1,9 @@
 class Patience:
-
     '''
     Implement common "patience" technique
     '''
 
-    def __init__(self, patience=20):
+    def __init__(self, patience=30):
         self.local_vl_optimum = -1
         self.patience = patience
         self.best_epoch = -1
@@ -25,6 +24,6 @@ class Patience:
         else:
             self.counter += 1
             return self.counter >= self.patience
-        
+
     def get_best_vl_metrics(self):
         return self.tr_loss, self.tr_hits1, self.tr_hits10, self.vl_loss, self.vl_hits1, self.vl_hits10, self.best_epoch

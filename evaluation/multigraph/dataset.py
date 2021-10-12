@@ -9,7 +9,7 @@ class GraphMatchingDataset:
         self.edge_attr_t = edge_attr_t
         self.y = y
         self.name = name
-    
+
     def to(self, device):
         self.y = self.y.to(device)
         self.x_s, self.x_t = self.x_s.to(device), self.x_t.to(device)

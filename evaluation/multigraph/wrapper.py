@@ -128,7 +128,7 @@ class ModelWrapper:
                 total_loss += tr_loss.item() * (data.x_s_batch.max().item() + 1)
                 correct_at_1 += model.acc(S, y, reduction='sum')
                 correct_at_10 += model.hits_at_k(10, S, y, reduction='sum')
-
+                num_examples += y.size(1)
                 tr_loss.backward()
                 optimizer.step()
 
@@ -151,6 +151,7 @@ class ModelWrapper:
                     total_loss += vl_loss.item() * (data.x_s_batch.max().item() + 1)
                     correct_at_1 += model.acc(S, y, reduction='sum')
                     correct_at_10 += model.hits_at_k(10, S, y, reduction='sum')
+                    num_examples += y.size(1)
 
                 vl_loss = total_loss / len(val_loader.dataset)
                 vl_hits1 = correct_at_1 / num_examples

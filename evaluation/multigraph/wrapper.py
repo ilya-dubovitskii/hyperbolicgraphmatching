@@ -75,7 +75,6 @@ class ModelWrapper:
             psi = EuclideanGCN(self.input_dim, self.out_channels, self.num_layers,
                                cat=self.cat, lin=self.lin, dropout=self.dropout).to(device)
             model = EuclideanGraphMatching(psi, k=self.k).to(device)
-            h_s, h_t = self.preprocess_input(dataset, None)
 
         elif self.space == 'Hyperbolic':
             manifold = Hyperboloid()
@@ -83,7 +82,6 @@ class ModelWrapper:
                                 self.num_layers, cat=self.cat, lin=self.lin, dropout=self.dropout).to(device)
             model = HyperbolicGraphMatching(psi, k=self.k, sim=self.sim).to(device)
 
-            h_s, h_t = self.preprocess_input(dataset, manifold)
 
         elif self.space == 'Mobius':
             print('Mobius NNs are initializing...')
@@ -92,7 +90,6 @@ class ModelWrapper:
                             self.num_layers, cat=self.cat, lin=self.lin, dropout=self.dropout).to(device)
             model = MobiusGraphMatching(psi, k=self.k, sim=self.sim).to(device)
 
-            h_s, h_t = self.preprocess_input(dataset, manifold)
         else:
             raise ValueError(f'Wrong manifold! Expected one of: {_supported_manifold_list}')
 

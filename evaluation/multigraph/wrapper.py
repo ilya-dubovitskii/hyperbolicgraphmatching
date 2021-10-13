@@ -72,6 +72,7 @@ class ModelWrapper:
     def run(self, dataset, tr_idx, val_idx):
         device = self.device
         if self.space == 'Euclidean':
+            manifold = None
             psi = EuclideanGCN(self.input_dim, self.out_channels, self.num_layers,
                                cat=self.cat, lin=self.lin, dropout=self.dropout).to(device)
             model = EuclideanGraphMatching(psi, k=self.k).to(device)

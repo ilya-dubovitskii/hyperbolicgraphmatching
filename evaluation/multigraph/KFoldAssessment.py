@@ -90,7 +90,6 @@ class KFoldAssessment:
                     print(f'{resultspkl} already exists! Proceeding to the next fold')
                     continue
                 else:
-                    dataset.to(device)
                     self._risk_assessment_helper(dataset, tr_idx, ts_idx, fold_dir, device)
 
         assessment_results = self.process_results()

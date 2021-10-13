@@ -157,11 +157,11 @@ class ModelWrapper:
                 vl_hits1 = correct_at_1 / num_examples
                 vl_hits10 = correct_at_10 / num_examples
 
-            if torch.isnan(tr_loss) or torch.isnan(vl_loss):
-                print('NAN LOSS')
-                tr_loss = torch.tensor([10000])
-                vl_loss = torch.tensor([10000])
-                break
+            # if float.isnan(tr_loss) or float.isnan(vl_loss):
+            #     print('NAN LOSS')
+            #     tr_loss = torch.tensor([10000])
+            #     vl_loss = torch.tensor([10000])
+            #     break
 
             if early_stopper.stop(i, vl_loss, vl_hits1, vl_hits10, tr_loss, tr_hits1, tr_hits10):
                 break

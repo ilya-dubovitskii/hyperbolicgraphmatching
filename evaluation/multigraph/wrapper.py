@@ -149,19 +149,33 @@ class ModelWrapper:
             with torch.no_grad():
                 model.eval()
                 correct_at_1 = correct_at_10 = num_examples = 0
-                for data in val_loader:
-                    data = data.to(device)
-                    h_s, h_t = self.preprocess_input(data, manifold)
-                    S = model(h_s, data.edge_index_s, data.edge_attr_s,
-                              data.x_s_batch, h_t, data.edge_index_t,
-                              data.edge_attr_t, data.x_t_batch)
+                if self.dataset_type == 'pascal_pf':
+                    for pair in dataset.pairs:
+                        data_s, data_t = dataset[pair[0]], dataset[pair[1]]
+                        data_s, data_t = data_s.to(device), data_t.to(device)
+                        S = model(data_s.x, data_s.edge_index, data_s.edge_attr, None,
+                                  data_t.x, data_t.edge_index, data_t.edge_attr, None)
+                        y = torch.arange(data_s.num_nodes, device=device)
+                        y = torch.stack([y, y], dim=0)
+                        vl_loss = model.loss(S, y)
+                        total_loss += vl_loss.item() * (data.x_s_batch.max().item() + 1)
+                        correct_at_1 += model.acc(S, y, reduction='sum')
+                        correct_at_10 += model.hits_at_k(10, S, y, reduction='sum')
+                        num_examples += y.size(1)
+                else:
+                    for data in val_loader:
+                        data = data.to(device)
+                        h_s, h_t = self.preprocess_input(data, manifold)
+                        S = model(h_s, data.edge_index_s, data.edge_attr_s,
+                                  data.x_s_batch, h_t, data.edge_index_t,
+                                  data.edge_attr_t, data.x_t_batch)
 
-                    y = self.generate_y(data)
-                    vl_loss = model.loss(S, y)
-                    total_loss += vl_loss.item() * (data.x_s_batch.max().item() + 1)
-                    correct_at_1 += model.acc(S, y, reduction='sum')
-                    correct_at_10 += model.hits_at_k(10, S, y, reduction='sum')
-                    num_examples += y.size(1)
+                        y = self.generate_y(data)
+                        vl_loss = model.loss(S, y)
+                        total_loss += vl_loss.item() * (data.x_s_batch.max().item() + 1)
+                        correct_at_1 += model.acc(S, y, reduction='sum')
+                        correct_at_10 += model.hits_at_k(10, S, y, reduction='sum')
+                        num_examples += y.size(1)
 
                 vl_loss = total_loss / len(val_loader.dataset)
                 vl_hits1 = correct_at_1 / num_examples

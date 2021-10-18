@@ -123,8 +123,8 @@ elif args.dataset == 'pascal_pf':
     train_dataset = RandomGraphDataset(30, 60, 0, 20, transform=transform)
 
     path = osp.join('..', 'data', 'PascalPF')
-    test_datasets = [PascalPF(path, cat, transform) for cat in PascalPF.categories]
-    test_dataset = torch.utils.data.ConcatDataset(test_datasets)
+    test_dataset = [PascalPF(path, cat, transform) for cat in PascalPF.categories]
+    # test_dataset = torch.utils.data.ConcatDataset(test_datasets)
 else:
     raise ValueError('wrong dataset')
 

@@ -156,7 +156,7 @@ class ModelWrapper:
                               data.x_s_batch, h_t, data.edge_index_t,
                               data.edge_attr_t, data.x_t_batch)
 
-                    y = self.generate_y(data.y)
+                    y = self.generate_y(data)
                     vl_loss = model.loss(S, y)
                     total_loss += vl_loss.item() * (data.x_s_batch.max().item() + 1)
                     correct_at_1 += model.acc(S, y, reduction='sum')

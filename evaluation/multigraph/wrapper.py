@@ -150,18 +150,28 @@ class ModelWrapper:
                 model.eval()
                 correct_at_1 = correct_at_10 = num_examples = 0
                 if self.dataset_type == 'pascal_pf':
-                    for pair in dataset.pairs:
-                        data_s, data_t = dataset[pair[0]], dataset[pair[1]]
-                        data_s, data_t = data_s.to(device), data_t.to(device)
-                        S = model(data_s.x, data_s.edge_index, data_s.edge_attr, None,
-                                  data_t.x, data_t.edge_index, data_t.edge_attr, None)
-                        y = torch.arange(data_s.num_nodes, device=device)
-                        y = torch.stack([y, y], dim=0)
-                        vl_loss = model.loss(S, y)
-                        total_loss += vl_loss.item() * (data.x_s_batch.max().item() + 1)
-                        correct_at_1 += model.acc(S, y, reduction='sum')
-                        correct_at_10 += model.hits_at_k(10, S, y, reduction='sum')
-                        num_examples += y.size(1)
+                    vl_loss = vl_hits1 = vl_hits10 = 0
+                    for dataset in val_dataset:
+
+                        for pair in dataset.pairs:
+                            data_s, data_t = dataset[pair[0]], dataset[pair[1]]
+                            data_s, data_t = data_s.to(device), data_t.to(device)
+                            S = model(data_s.x, data_s.edge_index, data_s.edge_attr, None,
+                                      data_t.x, data_t.edge_index, data_t.edge_attr, None)
+                            y = torch.arange(data_s.num_nodes, device=device)
+                            y = torch.stack([y, y], dim=0)
+                            vl_loss = model.loss(S, y)
+                            total_loss += vl_loss.item() * (data.x_s_batch.max().item() + 1)
+                            correct_at_1 += model.acc(S, y, reduction='sum')
+                            correct_at_10 += model.hits_at_k(10, S, y, reduction='sum')
+                            num_examples += y.size(1)
+                        vl_loss += total_loss / len(val_loader.dataset)
+                        vl_hits1 += correct_at_1 / num_examples
+                        vl_hits10 += correct_at_10 / num_examples
+                    vl_loss = vl_loss / len(dataset.pairs)
+                    vl_hits1 = vl_hits1 / len(dataset.pairs)
+                    vl_hits10 = vl_hits10 / len(dataset.pairs)
+
                 else:
                     for data in val_loader:
                         data = data.to(device)
@@ -177,9 +187,9 @@ class ModelWrapper:
                         correct_at_10 += model.hits_at_k(10, S, y, reduction='sum')
                         num_examples += y.size(1)
 
-                vl_loss = total_loss / len(val_loader.dataset)
-                vl_hits1 = correct_at_1 / num_examples
-                vl_hits10 = correct_at_10 / num_examples
+                    vl_loss = total_loss / len(val_loader.dataset)
+                    vl_hits1 = correct_at_1 / num_examples
+                    vl_hits10 = correct_at_10 / num_examples
 
             # if float.isnan(tr_loss) or float.isnan(vl_loss):
             #     print('NAN LOSS')

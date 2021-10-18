@@ -69,7 +69,7 @@ class ModelWrapper:
 
         return h_s, h_t
 
-    def run(self, dataset, tr_idx, val_idx):
+    def run(self, dataset, tr_idx, val_idx, val_dataset=None):
         device = self.device
         if self.space == 'Euclidean':
             manifold = None
@@ -104,7 +104,8 @@ class ModelWrapper:
         early_stopper = Patience()
 
         train_dataset = Subset(dataset, tr_idx)
-        val_dataset = Subset(dataset, val_idx)
+        if not val_dataset:
+            val_dataset = Subset(dataset, val_idx)
 
         train_loader = DataLoader(train_dataset, 64, shuffle=True,
                                   follow_batch=['x_s', 'x_t'])

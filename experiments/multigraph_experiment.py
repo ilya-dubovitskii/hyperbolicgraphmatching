@@ -6,6 +6,7 @@ import argparse
 import torch
 from torch_geometric.datasets import PascalVOCKeypoints as PascalVOC
 import torch_geometric.transforms as T
+from torch_geometric.datasets import PascalPF
 from torch_geometric.data import DataLoader
 
 from dgmc.utils import ValidPairDataset
@@ -15,6 +16,7 @@ sys.path.append("../evaluation")
 sys.path.append("..")
 from torch_geometric.datasets import DBP15K
 from manifolds.hyperboloid import Hyperboloid
+from multigraph.dataset import RandomGraphDataset
 from multigraph.KFoldAssessment import KFoldAssessment
 from multigraph.HoldOutSelection import HoldOutSelector
 from multigraph.dataset import GraphMatchingDataset
@@ -49,7 +51,7 @@ if args.space == 'hyperbolic':
                         'lin': [True],
                         'dropout': [0],
                         'sim': [args.sim],
-                        'k': [10],
+                        'k': [-1],
                         'lr': [0.9 * 1e-3, 1e-3, 1.1 * 1e-3, 1.2 * 1e-3],
                         'gamma': [0.8],
                         'max_epochs': [500]
@@ -64,7 +66,7 @@ elif args.space == 'euclidean':
                         'lin': [True],
                         'dropout': [0],
                         'sim': [args.sim],
-                        'k': [10],
+                        'k': [-1],
                         'lr': [0.9 * 1e-3, 1e-3, 1.1 * 1e-3, 1.2 * 1e-3],
                         'gamma': [0.8],
                         'max_epochs': [500]
@@ -79,7 +81,7 @@ elif args.space == 'mobius':
                         'lin': [True],
                         'dropout': [0],
                         'sim': [args.sim],
-                        'k': [10],
+                        'k': [-1],
                         'lr': [0.9 * 1e-3, 1e-3, 1.1 * 1e-3, 1.2 * 1e-3],
                         'gamma': [0.8],
                         'max_epochs': [500]
@@ -109,12 +111,20 @@ if args.dataset == 'pascal':
         dataset = PascalVOC(path, category, train=False, transform=transform,
                             pre_filter=pre_filter)
         test_datasets += [ValidPairDataset(dataset, dataset, sample=True)]
-    data = torch.utils.data.ConcatDataset(train_datasets)
-    # data = DataLoader(train_dataset, args.batch_size, shuffle=True,
-    #                           follow_batch=['x_s', 'x_t'])
-    # gt = torch.cat([data.train_y, data.test_y], dim=-1)
-    # data = GraphMatchingDataset(args.category, data.x1, data.edge_index1,
-    #                             None, data.x2, data.edge_index2, None, gt)
+    train_dataset = torch.utils.data.ConcatDataset(train_datasets)
+    test_dataset = torch.utils.data.ConcatDataset(test_datasets)
+
+elif args.dataset == 'pascal_pf':
+    transform = T.Compose([
+        T.Constant(),
+        T.KNNGraph(k=8),
+        T.Cartesian(),
+    ])
+    train_dataset = RandomGraphDataset(30, 60, 0, 20, transform=transform)
+
+    path = osp.join('..', 'data', 'PascalPF')
+    test_datasets = [PascalPF(path, cat, transform) for cat in PascalPF.categories]
+    test_dataset = torch.utils.data.ConcatDataset(test_datasets)
 else:
     raise ValueError('wrong dataset')
 
@@ -126,7 +136,7 @@ else:
     half_folds = False
 
 ass = KFoldAssessment(args.num_folds, results_path, model_selector, invert_folds=False, half_folds=half_folds)
-ass.risk_assessment(data, device=args.device)
+ass.risk_assessment(train_dataset, device=args.device, test_dataset=test_dataset)
 
 with open(f'{results_path}/parameter_ranges.json', 'w') as fp:
     json.dump(parameter_ranges, fp)

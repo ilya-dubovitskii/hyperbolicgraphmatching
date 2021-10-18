@@ -63,7 +63,7 @@ class GridSampler:
 
 
 class HoldOutSelector:
-    def __init__(self, parameter_ranges, full_search=True, num_configs=100):
+    def __init__(self, parameter_ranges, full_search=True, num_configs=100, dataset_type='pascal'):
         self.parameter_ranges = parameter_ranges
         self.num_configs = num_configs
         self.full_search = full_search
@@ -71,6 +71,7 @@ class HoldOutSelector:
         self._RESULTS_FILENAME = 'results.json'
         self.WINNER_CONFIG_FILENAME = 'winner_config.json'
         self._FOLD_BASE = None  # to be specified in :meth: model_selection
+        self.dataset_type = dataset_type
 
     def process_results(self):
         best_vl_hits1 = 0.
@@ -136,7 +137,7 @@ class HoldOutSelector:
         exp = Experiment()
         results_dict = {}
 
-        tr_hits1, tr_hits10, vl_hits1, vl_hits10 = exp.run_valid(dataset, tr_idx, vl_idx, config, device)
+        tr_hits1, tr_hits10, vl_hits1, vl_hits10 = exp.run_valid(dataset, tr_idx, vl_idx, config, device, self.dataset_type)
 
         results_dict['TR_hits1'] = tr_hits1
         results_dict['VL_hits1'] = vl_hits1

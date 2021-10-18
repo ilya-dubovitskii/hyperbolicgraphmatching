@@ -91,7 +91,7 @@ elif args.space == 'mobius':
 else:
     raise ValueError(f'Wrong space!')
 
-model_selector = HoldOutSelector(parameter_ranges, full_search=True)
+model_selector = HoldOutSelector(parameter_ranges, full_search=True, dataset_type=args.dataset)
 
 if args.dataset == 'pascal':
     pre_filter = lambda data: data.pos.size(0) > 0  # noqa
@@ -135,7 +135,8 @@ if args.num_folds > 5:
 else:
     half_folds = False
 
-ass = KFoldAssessment(args.num_folds, results_path, model_selector, invert_folds=False, half_folds=half_folds)
+ass = KFoldAssessment(args.num_folds, results_path, model_selector, invert_folds=False, half_folds=half_folds,
+                      dataset_type=args.dataset)
 ass.risk_assessment(train_dataset, device=args.device, test_dataset=test_dataset)
 
 with open(f'{results_path}/parameter_ranges.json', 'w') as fp:

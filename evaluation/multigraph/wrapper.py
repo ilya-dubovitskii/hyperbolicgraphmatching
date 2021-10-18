@@ -17,7 +17,7 @@ _c_to_norm = {0.005: 0.5, 0.01: 0.6, 0.015: 0.8, 0.02: 0.9, 0.025: 1, 0.04: 1.2,
 
 
 class ModelWrapper:
-    def __init__(self, input_dim, config, device='cuda'):
+    def __init__(self, input_dim, config, device='cuda', dataset_type='pascal'):
         self.space = config.space
         self.input_dim = input_dim
         self.out_channels = config.out_channels
@@ -32,10 +32,19 @@ class ModelWrapper:
         self.gamma = config.gamma
         self.max_epochs = config.max_epochs
         self.device = device
+        self.dataset_type = dataset_type
 
-    def generate_y(self, y_col):
-        y_row = torch.arange(y_col.size(0), device=self.device)
-        return torch.stack([y_row, y_col], dim=0)
+    def generate_y(self, data):
+        if self.dataset_type == 'pascal':
+            y_row = torch.arange(data.y.size(0), device=self.device)
+            y = torch.stack([y_row, data.y], dim=0)
+        elif self.dataset_type == 'pascal_pf':
+            y = torch.stack([data.y_index_s, data.y_t], dim=0)
+        elif self.dataset_type == 'willow':
+            raise NotImplementedError()
+        else:
+            raise ValueError('wrong dataset')
+        return y
 
     def preprocess_input(self, dataset, manifold):
         if self.space == 'Euclidean':
@@ -124,7 +133,7 @@ class ModelWrapper:
                           data.x_s_batch, h_t, data.edge_index_t,
                           data.edge_attr_t, data.x_t_batch)
 
-                y = self.generate_y(data.y)
+                y = self.generate_y(data)
                 tr_loss = model.loss(S, y)
                 total_loss += tr_loss.item() * (data.x_s_batch.max().item() + 1)
                 correct_at_1 += model.acc(S, y, reduction='sum')

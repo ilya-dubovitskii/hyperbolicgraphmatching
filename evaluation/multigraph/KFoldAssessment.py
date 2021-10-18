@@ -7,7 +7,7 @@ from multigraph.experiment import Experiment
 
 
 class KFoldAssessment:
-    def __init__(self, num_folds, exp_path, model_selector, invert_folds=True, half_folds=True):
+    def __init__(self, num_folds, exp_path, model_selector, invert_folds=True, half_folds=True, dataset_type='pascal'):
         self.num_folds = num_folds
         self.invert_folds = invert_folds
         self.half_folds = True
@@ -19,6 +19,7 @@ class KFoldAssessment:
         self._RESULTS_FILENAME = 'winner_results.json'
         self._CONFIG_FILENAME = 'winner_config.json'
         self._ASSESSMENT_FILENAME = 'assessment_results.json'
+        self.dataset_type = dataset_type
 
     def process_results(self):
         TR_hits1 = []
@@ -103,7 +104,7 @@ class KFoldAssessment:
         tr_hits1, tr_hits10, ts_hits1, ts_hits10 = [], [], [], []
 
         for i in range(3):
-            tr_h1, tr_h10, ts_h1, ts_h10 = exp.run_valid(dataset, tr_idx, ts_idx, winner_config, device, test_dataset)
+            tr_h1, tr_h10, ts_h1, ts_h10 = exp.run_valid(dataset, tr_idx, ts_idx, winner_config, device, dataset_type, test_dataset)
             tr_hits1.append(tr_h1)
             ts_hits1.append(ts_h1)
             tr_hits10.append(tr_h10)

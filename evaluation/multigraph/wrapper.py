@@ -149,7 +149,7 @@ class ModelWrapper:
             with torch.no_grad():
                 model.eval()
                 correct_at_1 = correct_at_10 = num_examples = 0
-                if self.dataset_type == 'pascal_pf':
+                if self.dataset_type == 'pascal_pf' and isinstance(val_dataset, list):
                     vl_loss = vl_hits1 = vl_hits10 = 0
                     for dataset in val_dataset:
 
